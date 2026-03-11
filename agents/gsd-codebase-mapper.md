@@ -5,6 +5,7 @@ tools: Read, Bash, Grep, Glob, Write
 color: cyan
 skills:
   - gsd-mapper-workflow
+model: sonnet
 # hooks:
 #   PostToolUse:
 #     - matcher: "Write|Edit"

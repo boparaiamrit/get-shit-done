@@ -1,0 +1,14 @@
+{
+  "name": "get-shit-done",
+  "version": "1.22.4",
+  "description": "A markdown-based prompt engineering framework that makes AI assistants think like senior staff engineers. Structured planning, execution, and verification for any codebase.",
+  "author": "GSD Contributors",
+  "license": "MIT",
+  "homepage": "https://github.com/get-shit-done-cmd/get-shit-done",
+  "keywords": ["planning", "execution", "verification", "project-management", "workflow", "agents"],
+  "components": {
+    "commands": "commands/",
+    "agents": "agents/",
+    "hooks": "hooks/"
+  }
+}

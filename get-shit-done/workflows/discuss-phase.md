@@ -1,7 +1,7 @@
 <purpose>
-Extract implementation decisions that downstream agents need. Analyze the phase to identify gray areas, let the user choose what to discuss, then deep-dive each selected area until satisfied.
+Generate an implementation proposal with AI-driven recommendations for downstream agents. Classify all decisions by confidence level, lead with recommendations, and only ask the user about genuinely ambiguous items — minimizing back-and-forth while still capturing user intent.
 
-You are a thinking partner, not an interviewer. The user is the visionary — you are the builder. Your job is to capture decisions that will guide research and planning, not to figure out implementation yourself.
+You are a thinking partner, not an interviewer. The user is the visionary — you are the builder. Your job is to propose decisions that will guide research and planning, get user sign-off, and capture the results — not to figure out implementation yourself.
 </purpose>
 
 <downstream_awareness>
@@ -21,7 +21,7 @@ You are a thinking partner, not an interviewer. The user is the visionary — yo
 </downstream_awareness>
 
 <philosophy>
-**User = founder/visionary. Claude = builder.**
+**User = founder/visionary. Claude = builder who leads with recommendations.**
 
 The user knows:
 - How they imagine it working
@@ -35,7 +35,7 @@ The user doesn't know (and shouldn't be asked):
 - Implementation approach (planner figures this out)
 - Success metrics (inferred from the work)
 
-Ask about vision and implementation choices. Capture decisions for downstream agents.
+**Recommendation-first principle:** Don't interrogate. Propose a complete implementation plan and let the user override what they disagree with. Most decisions have a clear best answer given project context — make those decisions yourself with a one-line reason. For debatable items, lead with your pick and explain why. Only escalate to the user when genuinely ambiguous (max 3-5 items).
 </philosophy>
 
 <scope_guardrail>
@@ -67,9 +67,20 @@ Capture the idea in a "Deferred Ideas" section. Don't lose it, don't act on it.
 </scope_guardrail>
 
 <gray_area_identification>
-Gray areas are **implementation decisions the user cares about** — things that could go multiple ways and would change the result.
+Implementation decisions fall into **three confidence tiers** based on how clear the right answer is given project context.
 
-**How to identify gray areas:**
+**Decision classification framework:**
+
+1. **Auto-Decide (~70%)** — Clear best answer given project context, codebase conventions, and prior decisions. AI decides with a one-line reason. No user input needed.
+   - Examples: naming conventions matching existing code, using an already-established pattern, following a prior-phase decision
+
+2. **Recommend + Explain (~25%)** — Debatable, but AI has a strong opinion. Lead with the pick, explain why with project-specific reasoning, show alternatives with conditions when each would be better.
+   - Examples: layout approach when multiple valid options exist, interaction pattern with trade-offs, data display strategy
+
+3. **Must-Ask (~5%, max 3-5 items)** — Genuinely need user input because the decision reflects personal preference, brand identity, or has irreversible consequences. Still lead with a recommendation.
+   - Examples: visual tone/personality choices, workflow decisions that change user habits, commitments that are expensive to reverse
+
+**How to classify decisions:**
 
 1. **Read the phase goal** from ROADMAP.md
 2. **Understand the domain** — What kind of thing is being built?
@@ -78,27 +89,21 @@ Gray areas are **implementation decisions the user cares about** — things that
    - Something users RUN → invocation, output, behavior modes matter
    - Something users READ → structure, tone, depth, flow matter
    - Something being ORGANIZED → criteria, grouping, handling exceptions matter
-3. **Generate phase-specific gray areas** — Not generic categories, but concrete decisions for THIS phase
+3. **Generate ALL implementation decisions** for this phase — not generic categories, but concrete choices
+4. **Classify each** using the deep-think protocol below
 
-**Don't use generic category labels** (UI, UX, Behavior). Generate specific gray areas:
+**Deep-think protocol — before each classification, verify against:**
+1. **Project context** — Does the codebase already do this a certain way? Does a prior decision lock this in?
+2. **Scale context** — Is this appropriate for the project's current scale and maturity?
+3. **Team context** — Can the team (or solo developer) maintain this? Exotic solutions that require specialized knowledge are a liability.
+4. **Convention** — Is there an industry-standard answer?
+5. **Reversibility** — Easy to change later → lean toward Auto-Decide. Hard to reverse → lean toward Recommend or Must-Ask.
 
-```
-Phase: "User authentication"
-→ Session handling, Error responses, Multi-device policy, Recovery flow
+**Decision batching rule:** Group related decisions into coherent packages (e.g., "Data Display Strategy" covering layout + density + ordering, rather than three separate items). This reduces cognitive load and produces more consistent decisions.
 
-Phase: "Organize photo library"
-→ Grouping criteria, Duplicate handling, Naming convention, Folder structure
+**Question budget enforcement:** Max 3-5 items in "Input Needed". If you have more, think harder — apply the deep-think protocol again and move items to Recommend + Explain. If the recommendation is strong and well-reasoned, users can always override.
 
-Phase: "CLI for database backups"
-→ Output format, Flag design, Progress reporting, Error recovery
-
-Phase: "API documentation"
-→ Structure/navigation, Code examples depth, Versioning approach, Interactive elements
-```
-
-**The key question:** What decisions would change the outcome that the user should weigh in on?
-
-**Claude handles these (don't ask):**
+**Claude handles these (always Auto-Decide):**
 - Technical implementation details
 - Architecture patterns
 - Performance optimization
@@ -266,172 +271,184 @@ Store as internal `<codebase_context>` for use in analyze_phase and present_gray
 </step>
 
 <step name="analyze_phase">
-Analyze the phase to identify gray areas worth discussing. **Use both `prior_decisions` and `codebase_context` to ground the analysis.**
+Analyze the phase to classify ALL implementation decisions. **Use both `prior_decisions` and `codebase_context` to ground every classification.**
 
 **Read the phase description from ROADMAP.md and determine:**
 
 1. **Domain boundary** — What capability is this phase delivering? State it clearly.
 
-2. **Check prior decisions** — Before generating gray areas, check if any were already decided:
+2. **Check prior decisions** — Before generating decisions, check what's already locked:
    - Scan `<prior_decisions>` for relevant choices (e.g., "Ctrl+C only, no single-key shortcuts")
-   - These are **pre-answered** — don't re-ask unless this phase has conflicting needs
-   - Note applicable prior decisions for use in presentation
+   - These are **pre-answered** — carry them forward as Auto-Decide items citing the prior phase
+   - Note applicable prior decisions for use in the proposal
 
-3. **Gray areas by category** — For each relevant category (UI, UX, Behavior, Empty States, Content), identify 1-2 specific ambiguities that would change implementation. **Annotate with code context where relevant** (e.g., "You already have a Card component" or "No existing pattern for this").
+3. **Generate ALL implementation decisions** — Every choice that could affect the outcome, no matter how small. Batch related decisions into coherent packages (e.g., "Data Display Strategy" instead of separate layout/pagination/sorting items).
 
-4. **Skip assessment** — If no meaningful gray areas exist (pure infrastructure, clear-cut implementation, or all already decided in prior phases), the phase may not need discussion.
+4. **Classify each decision using the deep-think protocol:**
 
-**Output your analysis internally, then present to user.**
+   For each decision or decision package, verify against:
+   - **Project context:** Does the codebase already do this? Does a prior decision apply?
+   - **Scale context:** Is this appropriate for the project's current maturity?
+   - **Team context:** Can the team (or solo developer) maintain this? Exotic solutions requiring specialized knowledge are a liability.
+   - **Convention:** Is there an industry-standard answer?
+   - **Reversibility:** Easy to change later, or locked in once built?
 
-Example analysis for "Post Feed" phase (with code and prior context):
-```
-Domain: Displaying posts from followed users
-Existing: Card component (src/components/ui/Card.tsx), useInfiniteQuery hook, Tailwind CSS
-Prior decisions: "Minimal UI preferred" (Phase 2), "No pagination — always infinite scroll" (Phase 4)
-Gray areas:
-- UI: Layout style (cards vs timeline vs grid) — Card component exists with shadow/rounded variants
-- UI: Information density (full posts vs previews) — no existing density patterns
-- Behavior: Loading pattern — ALREADY DECIDED: infinite scroll (Phase 4)
-- Empty State: What shows when no posts exist — EmptyState component exists in ui/
-- Content: What metadata displays (time, author, reactions count)
-```
-</step>
+   Then assign a tier:
 
-<step name="present_gray_areas">
-Present the domain boundary, prior decisions, and gray areas to user.
-
-**First, state the boundary and any prior decisions that apply:**
-```
-Phase [X]: [Name]
-Domain: [What this phase delivers — from your analysis]
-
-We'll clarify HOW to implement this.
-(New capabilities belong in other phases.)
-
-[If prior decisions apply:]
-**Carrying forward from earlier phases:**
-- [Decision from Phase N that applies here]
-- [Decision from Phase M that applies here]
-```
-
-**Then use AskUserQuestion (multiSelect: true):**
-- header: "Discuss"
-- question: "Which areas do you want to discuss for [phase name]?"
-- options: Generate 3-4 phase-specific gray areas, each with:
-  - "[Specific area]" (label) — concrete, not generic
-  - [1-2 questions this covers + code context annotation] (description)
-  - **Highlight the recommended choice with brief explanation why**
-
-**Prior decision annotations:** When a gray area was already decided in a prior phase, annotate it:
-```
-☐ Exit shortcuts — How should users quit?
-  (You decided "Ctrl+C only, no single-key shortcuts" in Phase 5 — revisit or keep?)
-```
-
-**Code context annotations:** When the scout found relevant existing code, annotate the gray area description:
-```
-☐ Layout style — Cards vs list vs timeline?
-  (You already have a Card component with shadow/rounded variants. Reusing it keeps the app consistent.)
-```
-
-**Combining both:** When both prior decisions and code context apply:
-```
-☐ Loading behavior — Infinite scroll or pagination?
-  (You chose infinite scroll in Phase 4. useInfiniteQuery hook already set up.)
-```
-
-**Do NOT include a "skip" or "you decide" option.** User ran this command to discuss — give them real choices.
-
-**Examples by domain (with code context):**
-
-For "Post Feed" (visual feature):
-```
-☐ Layout style — Cards vs list vs timeline? (Card component exists with variants)
-☐ Loading behavior — Infinite scroll or pagination? (useInfiniteQuery hook available)
-☐ Content ordering — Chronological, algorithmic, or user choice?
-☐ Post metadata — What info per post? Timestamps, reactions, author?
-```
-
-For "Database backup CLI" (command-line tool):
-```
-☐ Output format — JSON, table, or plain text? Verbosity levels?
-☐ Flag design — Short flags, long flags, or both? Required vs optional?
-☐ Progress reporting — Silent, progress bar, or verbose logging?
-☐ Error recovery — Fail fast, retry, or prompt for action?
-```
-
-For "Organize photo library" (organization task):
-```
-☐ Grouping criteria — By date, location, faces, or events?
-☐ Duplicate handling — Keep best, keep all, or prompt each time?
-☐ Naming convention — Original names, dates, or descriptive?
-☐ Folder structure — Flat, nested by year, or by category?
-```
-
-Continue to discuss_areas with selected areas.
-</step>
-
-<step name="discuss_areas">
-For each selected area, conduct a focused discussion loop.
-
-**Philosophy: 4 questions, then check.**
-
-Ask 4 questions per area before offering to continue or move on. Each answer often reveals the next question.
-
-**For each area:**
-
-1. **Announce the area:**
+   **Auto-Decide (~70%)** — Clear best answer. Assign with one-line reason.
    ```
-   Let's talk about [Area].
+   Decision: Use Tailwind utility classes for styling
+   Reason: Entire codebase uses Tailwind — no other pattern exists
    ```
 
-2. **Ask 4 questions using AskUserQuestion:**
-   - header: "[Area]" (max 12 chars — abbreviate if needed)
-   - question: Specific decision for this area
-   - options: 2-3 concrete choices (AskUserQuestion adds "Other" automatically), with the recommended choice highlighted and brief explanation why
-   - **Annotate options with code context** when relevant:
-     ```
-     "How should posts be displayed?"
-     - Cards (reuses existing Card component — consistent with Messages)
-     - List (simpler, would be a new pattern)
-     - Timeline (needs new Timeline component — none exists yet)
-     ```
-   - Include "You decide" as an option when reasonable — captures Claude discretion
-   - **Context7 for library choices:** When a gray area involves library selection (e.g., "magic links" → query next-auth docs) or API approach decisions, use `mcp__context7__*` tools to fetch current documentation and inform the options. Don't use Context7 for every question — only when library-specific knowledge improves the options.
+   **Recommend + Explain (~25%)** — Debatable but you have a strong opinion. Structure as:
+   ```
+   Decision: Data Display Strategy
+   Recommendation: Card-based layout with medium density
+   Why: Card component already exists (src/components/ui/Card.tsx), matches existing
+        visual language, medium density balances information and scannability
+   Alternatives:
+   - List layout — better if data is tabular or comparison-heavy
+   - Grid layout — better if visual thumbnails are the primary content
+   ```
 
-3. **After 4 questions, check:**
-   - header: "[Area]" (max 12 chars)
-   - question: "More questions about [area], or move to next?"
-   - options: "More questions" / "Next area"
+   **Must-Ask (~5%, max 3-5)** — Genuinely need user input. Still lead with recommendation:
+   ```
+   Decision: Empty state personality
+   Recommendation: Friendly illustration with action prompt
+   Why this needs your input: Empty states set emotional tone — this is a brand/voice
+        decision that affects how users feel about the product
+   ```
 
-   If "More questions" → ask 4 more, then check again
-   If "Next area" → proceed to next selected area
-   If "Other" (free text) → interpret intent: continuation phrases ("chat more", "keep going", "yes", "more") map to "More questions"; advancement phrases ("done", "move on", "next", "skip") map to "Next area". If ambiguous, ask: "Continue with more questions about [area], or move to the next area?"
+5. **Question budget check** — If Must-Ask has more than 5 items, re-evaluate. Apply the deep-think protocol again: Can you make a stronger recommendation and move it to Recommend + Explain? Remember, users can still override recommendations.
 
-4. **After all initially-selected areas complete:**
-   - Summarize what was captured from the discussion so far
-   - AskUserQuestion:
-     - header: "Done"
-     - question: "We've discussed [list areas]. Which gray areas remain unclear?"
-     - options: "Explore more gray areas" / "I'm ready for context"
-   - If "Explore more gray areas":
-     - Identify 2-4 additional gray areas based on what was learned
-     - Return to present_gray_areas logic with these new areas
-     - Loop: discuss new areas, then prompt again
-   - If "I'm ready for context": Proceed to write_context
+6. **Skip assessment** — If ALL decisions are Auto-Decide (pure infrastructure, clear-cut implementation, or everything already decided in prior phases), the phase may not need a full proposal. Proceed with a lightweight confirmation.
 
-**Question design:**
-- Options should be concrete, not abstract ("Cards" not "Option A")
-- Each answer should inform the next question
-- If user picks "Other" to provide freeform input (e.g., "let me describe it", "something else", or an open-ended reply), ask your follow-up as plain text — NOT another AskUserQuestion. Wait for them to type at the normal prompt, then reflect their input back and confirm before resuming AskUserQuestion for the next question.
+**Output the full classification internally, then proceed to generate_proposal.**
+</step>
+
+<step name="generate_proposal">
+Create a single **Implementation Proposal** document and present it to the user for review.
+
+**Build the proposal with three sections:**
+
+### Section 1: Decisions Made (Auto-Decide)
+
+List all auto-decided items, grouped by package where applicable. Each gets a one-line reason.
+
+```
+## Decisions Made
+
+These decisions have a clear best answer given your project context. Listed for transparency — override any you disagree with.
+
+- **Styling approach:** Tailwind utility classes — entire codebase uses Tailwind
+- **State management:** React Query for server state — already established pattern
+- **Routing:** File-based routing via Next.js App Router — existing convention
+- **Component location:** src/components/[feature]/ — matches project structure
+- **Error handling:** Error boundary pattern — used in 3 existing features
+```
+
+### Section 2: Recommendations (Recommend + Explain)
+
+For each debatable decision, lead with the pick, explain why with project-specific reasoning, and show alternatives with conditions when each is better. Group related items into packages.
+
+```
+## Recommendations
+
+Recommendations based on your codebase, prior decisions, and project context. Override any you disagree with.
+
+### Data Display Strategy
+**Recommendation:** Card-based layout with medium density
+- Card component already exists with shadow/rounded variants — reusing keeps the app visually consistent
+- Medium density balances information visibility and scannability for the expected data volume
+- *Alternative — List layout:* Better if data becomes comparison-heavy or users need to scan many rows quickly
+- *Alternative — Compact cards:* Better if the dataset grows large and users prefer density over whitespace
+
+### Loading & Pagination
+**Recommendation:** Infinite scroll with skeleton loading
+- useInfiniteQuery hook is already set up from Phase 4
+- Skeleton loading matches the existing pattern in the Messages feature
+- *Alternative — Paginated:* Better if users need to bookmark or share specific "pages" of results
+- *Alternative — Load-more button:* Better if scroll position preservation is critical
+```
+
+### Section 3: Input Needed (Must-Ask)
+
+Max 3-5 items. Each includes the question, a recommendation, and why user input is needed.
+
+```
+## Input Needed
+
+These decisions reflect personal preference, brand identity, or are expensive to reverse. Your input matters here.
+
+### 1. Empty state personality
+**Recommendation:** Friendly illustration with action prompt
+Why I'm asking: Empty states set the emotional tone of your product — this is a voice/brand decision.
+- Friendly illustration + CTA ("Start by adding...") — warm, encourages action
+- Minimal text only ("No items yet") — clean, stays out of the way
+- Rich onboarding guide — thorough, but heavier to maintain
+
+### 2. Notification behavior on new items
+**Recommendation:** Subtle badge count, no toast interruptions
+Why I'm asking: This affects how "noisy" your app feels — a UX personality choice.
+- Badge count only — quiet, user checks when ready
+- Toast notification — immediate awareness, but can feel interruptive
+- Both with user preference toggle — flexible, but more UI to build
+```
+
+**Present the complete proposal inline** (not as a file — the user reads it in the conversation), then proceed to review_proposal.
+</step>
+
+<step name="review_proposal">
+Present the proposal and collect user feedback in a single pass.
+
+**After presenting the proposal inline, use AskUserQuestion:**
+- header: "Proposal"
+- question: "Review this implementation proposal. Override anything you disagree with, or approve to proceed."
+- options:
+  - "Approve and proceed" — Accept all decisions and recommendations as proposed
+  - "Override specific items" — Tell me what to change
+
+**If "Approve and proceed":**
+All decisions (auto-decided, recommended, and must-ask defaults) are locked in. Proceed to write_context.
+
+**If "Override specific items":**
+Ask as plain text: "Which items do you want to change? Reference them by name and tell me your preference."
+
+Wait for the user's response. For each override:
+1. Acknowledge the change
+2. Update the relevant decision in the internal proposal
+3. If the override affects related decisions (e.g., changing layout affects density recommendations), flag the ripple effect and update those too
+
+After incorporating all overrides, re-present only the changed sections with a summary:
+
+```
+Updated proposal:
+- [Item] → Changed from [original] to [override] per your input
+- [Item] → Adjusted from [original] to [new recommendation] (ripple effect from above change)
+
+Everything else remains as proposed.
+```
+
+Then use AskUserQuestion:
+- header: "Confirm"
+- question: "Overrides applied. Approve the updated proposal?"
+- options:
+  - "Approve and proceed"
+  - "Override more items"
+
+If "Override more items": repeat the override loop.
+If "Approve and proceed": proceed to write_context.
+
+**If user provides free text instead of selecting an option** (e.g., "change the layout to list" or "I prefer pagination"), treat it as an override — incorporate the feedback, re-present changed sections, and confirm.
 
 **Scope creep handling:**
-If user mentions something outside the phase domain:
+If user's override introduces something outside the phase domain:
 ```
 "[Feature] sounds like a new capability — that belongs in its own phase.
 I'll note it as a deferred idea.
 
-Back to [current area]: [return to current question]"
+For the current proposal: [return to confirmation]"
 ```
 
 Track deferred ideas internally.
@@ -465,6 +482,28 @@ mkdir -p ".planning/phases/${padded_phase}-${phase_slug}"
 [Clear statement of what this phase delivers — the scope anchor]
 
 </domain>
+
+<auto_decisions>
+## Decisions Made
+
+[All auto-decided items with one-line reasons. These were clear best answers given project context.]
+
+- **[Decision]:** [Choice] — [one-line reason]
+- **[Decision]:** [Choice] — [one-line reason]
+
+</auto_decisions>
+
+<recommendations>
+## Accepted Recommendations
+
+[Recommendations that were approved (or approved with overrides). Include the rationale so downstream agents understand the reasoning.]
+
+### [Decision Package Name]
+- **Decision:** [What was decided]
+- **Rationale:** [Why this choice, with project-specific reasoning]
+- **Alternatives considered:** [What was not chosen and when it would be better]
+
+</recommendations>
 
 <decisions>
 ## Implementation Decisions
@@ -662,14 +701,17 @@ Route to `confirm_creation` step (existing behavior — show manual next steps).
 <success_criteria>
 - Phase validated against roadmap
 - Prior context loaded (PROJECT.md, REQUIREMENTS.md, STATE.md, prior CONTEXT.md files)
-- Already-decided questions not re-asked (carried forward from prior phases)
+- Already-decided questions carried forward as Auto-Decide items (not re-asked)
 - Codebase scouted for reusable assets, patterns, and integration points
-- Gray areas identified through intelligent analysis with code and prior decision annotations
-- User selected which areas to discuss
-- Each selected area explored until user satisfied (with code-informed and prior-decision-informed options)
+- All implementation decisions classified into Auto-Decide / Recommend+Explain / Must-Ask tiers
+- Deep-think protocol applied to each classification (project context, scale, convention, reversibility)
+- Related decisions batched into coherent packages
+- Question budget enforced (max 3-5 Must-Ask items)
+- Single implementation proposal generated with all three sections
+- User reviewed proposal in one pass (approve or override)
+- Overrides incorporated with ripple-effect awareness
 - Scope creep redirected to deferred ideas
-- CONTEXT.md captures actual decisions, not vague vision
-- CONTEXT.md includes code_context section with reusable assets and patterns
+- CONTEXT.md captures auto_decisions, recommendations, decisions, code_context, specifics, and deferred sections
 - Deferred ideas preserved for future phases
 - STATE.md updated with session info
 - User knows next steps

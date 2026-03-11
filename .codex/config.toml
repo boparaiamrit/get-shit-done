@@ -1,0 +1,44 @@
+# GSD (Get Shit Done) — Codex Configuration
+# Spec-driven development system for reliable AI-assisted coding
+
+model = "claude-sonnet-4-20250514"
+sandbox = "full"
+
+[instructions]
+# GSD workflow instructions for Codex
+text = """
+You are working in a project that uses GSD (Get Shit Done) — a spec-driven development system.
+
+## Core Rules
+1. PLAN BEFORE CODE — Never start implementing without reading the relevant PLAN.md from .planning/
+2. VERIFY BEFORE DONE — Run tests and check acceptance criteria before claiming completion
+3. EVIDENCE BEFORE CLAIMS — Never say "done" without verification output
+4. ROOT CAUSE BEFORE FIXES — Never patch symptoms, diagnose the actual problem
+
+## Project Structure
+All planning artifacts live in .planning/:
+- PROJECT.md — Vision, goals, constraints
+- REQUIREMENTS.md — Scoped requirements with REQ-IDs
+- ROADMAP.md — Phases mapped to requirements
+- STATE.md — Current position, decisions, blockers
+- config.json — Workflow settings
+- research/ — Domain research findings
+- phases/ — Per-phase plans, summaries, and verification
+
+## Workflow
+1. Check STATE.md for current position
+2. Read the relevant PLAN.md before writing any code
+3. Follow the plan's <action> instructions precisely
+4. Run the plan's <verify> checks after implementation
+5. Commit atomically per task: type(phase-plan): description
+
+## Commit Format
+feat(01-02): add email confirmation flow
+fix(03-01): resolve race condition in checkout
+docs(02-01): complete API documentation plan
+
+## Scope Discipline
+- Never add capabilities outside the current phase scope
+- Phase boundaries come from ROADMAP.md and are fixed during execution
+- Deferred ideas go in notes, not in code
+"""

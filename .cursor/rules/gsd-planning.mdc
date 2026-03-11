@@ -1,0 +1,65 @@
+---
+description: Planning discipline — never code without a plan, use research-first approach
+globs: .planning/**
+alwaysApply: false
+---
+
+# GSD Planning Rules
+
+## Never Code Without a Plan
+
+Before implementing anything, verify:
+
+1. A `.planning/ROADMAP.md` exists with phases defined
+2. The current phase has PLAN.md files in its phase directory
+3. You have read the plan you are about to execute
+
+If no plan exists, stop and tell the user to run the planning workflow first.
+
+## Research-First Approach
+
+GSD uses parallel research agents to investigate domains before planning:
+
+- **Stack research** — Standard 2025 stack for the domain
+- **Features research** — Table stakes vs differentiators
+- **Architecture research** — Component boundaries and data flow
+- **Pitfalls research** — Common mistakes and prevention strategies
+
+Research findings feed into plan creation. Plans that skip research tend to miss edge cases and make poor library choices.
+
+## Phase-Based Development
+
+Work is organized into phases, each mapped to specific requirements:
+
+- Each phase has a clear **goal** (from ROADMAP.md)
+- Each phase has **success criteria** (observable user behaviors)
+- Each phase contains 1-5 atomic **plans** (executable task specs)
+- Plans within a phase may have **dependencies** (wave grouping)
+
+## Plan Structure
+
+Plans use XML structure optimized for AI execution:
+
+```xml
+<task type="auto">
+  <name>Task name</name>
+  <files>files/to/modify.ts</files>
+  <action>Specific implementation instructions</action>
+  <verify>How to confirm it works</verify>
+  <done>Definition of done</done>
+</task>
+```
+
+## Roadmap and Milestone Awareness
+
+- Read `ROADMAP.md` to understand the full scope before working on any phase
+- Check `STATE.md` for current position, recent decisions, and blockers
+- Requirements in `REQUIREMENTS.md` use REQ-IDs (e.g., AUTH-01, CONT-02) for traceability
+- Every requirement maps to exactly one phase — check the traceability section
+
+## Scope Discipline
+
+- Never add capabilities outside the current phase scope
+- If you identify something useful that belongs in another phase, note it as a deferred idea
+- The phase boundary comes from ROADMAP.md and is fixed during execution
+- Clarify HOW to implement what is scoped, never WHETHER to add new features

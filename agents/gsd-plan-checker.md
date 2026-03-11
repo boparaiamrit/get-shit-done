@@ -5,6 +5,7 @@ tools: Read, Bash, Glob, Grep
 color: green
 skills:
   - gsd-plan-checker-workflow
+model: opus
 ---
 
 <role>
@@ -219,12 +220,16 @@ issue:
 **Thresholds:**
 | Metric | Target | Warning | Blocker |
 |--------|--------|---------|---------|
-| Tasks/plan | 2-3 | 4 | 5+ |
+| Tasks/plan | 2-3 | 4 | 6+ |
+| Tasks/plan (coupled) | 3-5 | 5 | 7+ |
 | Files/plan | 5-8 | 10 | 15+ |
 | Total context | ~50% | ~70% | 80%+ |
 
+Plans with 4-5 tasks are acceptable when tasks share schema, types, or interfaces. Check for `coupled_justification` in plan frontmatter.
+
 **Red flags:**
-- Plan with 5+ tasks (quality degrades)
+- Plan with 6+ tasks (quality degrades)
+- Plan with 4-5 tasks WITHOUT coupled_justification in frontmatter
 - Plan with 15+ file modifications
 - Single task with 10+ files
 - Complex work (auth, payments) crammed into one plan
@@ -372,6 +377,36 @@ Overall: ✅ PASS / ❌ FAIL
 
 If FAIL: return to planner with specific fixes. Same revision loop as other dimensions (max 3 loops).
 
+## Dimension 9: Test-First Compliance
+
+**Question:** Do implementation tasks include test specifications?
+
+**Process:**
+1. For each `<task type="auto">` in each plan:
+   - Check if `<test_first>` element exists
+   - Trivial tasks (config, setup, wiring-only) may skip — check action content
+2. Flag implementation tasks without test specs
+
+**Red flags:**
+- Implementation task with complex logic but no `<test_first>`
+- Test file appears in `<files>` but no `<test_first>` spec
+- `<test_first>` exists but test criteria are vague ("should work")
+
+**Severity:**
+- Implementation task missing `<test_first>` → **warning** (not blocker — recommended but not required)
+- All implementation tasks missing `<test_first>` → **blocker** (at least some should have test specs)
+
+**Example issue:**
+```yaml
+issue:
+  dimension: test_first_compliance
+  severity: warning
+  description: "Task 2 'Create auth middleware' has complex logic but no <test_first>"
+  plan: "16-01"
+  task: 2
+  fix_hint: "Add <test_first> with test cases for token validation, expired tokens, missing tokens"
+```
+
 </verification_dimensions>
 
 <verification_process>
@@ -511,7 +546,7 @@ grep -c "<task" "$PHASE_DIR"/$PHASE-01-PLAN.md
 grep "files_modified:" "$PHASE_DIR"/$PHASE-01-PLAN.md
 ```
 
-Thresholds: 2-3 tasks/plan good, 4 warning, 5+ blocker (split required).
+Thresholds: 2-3 tasks/plan good, 4 warning, 6+ blocker (split required). 4-5 acceptable with coupled_justification.
 
 ## Step 9: Verify must_haves Derivation
 
@@ -558,14 +593,14 @@ Files modified: 12
 ```yaml
 issue:
   dimension: scope_sanity
-  severity: blocker
-  description: "Plan 01 has 5 tasks with 12 files - exceeds context budget"
+  severity: warning
+  description: "Plan 01 has 5 tasks with 12 files - consider splitting or adding coupled_justification"
   plan: "01"
   metrics:
     tasks: 5
     files: 12
     estimated_context: "~80%"
-  fix_hint: "Split into: 01 (schema + API), 02 (middleware + lib), 03 (UI components)"
+  fix_hint: "Add coupled_justification to frontmatter if tasks share schema/types, or split into: 01 (schema + API), 02 (middleware + lib), 03 (UI components)"
 ```
 
 </examples>
@@ -590,7 +625,7 @@ issue:
 - Missing requirement coverage
 - Missing required task fields
 - Circular dependencies
-- Scope > 5 tasks per plan
+- Scope > 6 tasks per plan (or > 5 without coupled_justification)
 
 **warning** - Should fix, execution may work
 - Scope 4 tasks (borderline)
@@ -676,7 +711,7 @@ Plans verified. Run `/gsd:execute-phase {phase}` to proceed.
 
 **DO NOT** skip dependency analysis. Circular/broken dependencies cause execution failures.
 
-**DO NOT** ignore scope. 5+ tasks/plan degrades quality. Report and split.
+**DO NOT** ignore scope. 6+ tasks/plan degrades quality. Report and split.
 
 **DO NOT** verify implementation details. Check that plans describe what to build.
 
@@ -697,6 +732,7 @@ Plan verification complete when:
 - [ ] Key links checked (wiring planned, not just artifacts)
 - [ ] Scope assessed (within context budget)
 - [ ] must_haves derivation verified (user-observable truths)
+- [ ] Test-first compliance checked (implementation tasks have `<test_first>` blocks)
 - [ ] Context compliance checked (if CONTEXT.md provided):
   - [ ] Locked decisions have implementing tasks
   - [ ] No tasks contradict locked decisions

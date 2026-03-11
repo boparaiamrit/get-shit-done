@@ -47,9 +47,11 @@ Before returning PLANNING COMPLETE:
 - [ ] PLAN.md files created in phase directory
 - [ ] Each plan has valid frontmatter
 - [ ] Tasks are specific and actionable
+- [ ] Implementation tasks include `<test_first>` blocks where appropriate
 - [ ] Dependencies correctly identified
 - [ ] Waves assigned for parallel execution
 - [ ] must_haves derived from phase goal
+- [ ] Task count per plan: 2-3 default, up to 5 when tightly coupled
 </quality_gate>
 ```
 

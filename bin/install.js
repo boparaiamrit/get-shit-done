@@ -113,17 +113,17 @@ function getOpencodeGlobalDir() {
   if (process.env.OPENCODE_CONFIG_DIR) {
     return expandTilde(process.env.OPENCODE_CONFIG_DIR);
   }
-  
+
   // 2. OPENCODE_CONFIG env var (use its directory)
   if (process.env.OPENCODE_CONFIG) {
     return path.dirname(expandTilde(process.env.OPENCODE_CONFIG));
   }
-  
+
   // 3. XDG_CONFIG_HOME/opencode
   if (process.env.XDG_CONFIG_HOME) {
     return path.join(expandTilde(process.env.XDG_CONFIG_HOME), 'opencode');
   }
-  
+
   // 4. Default: ~/.config/opencode (XDG default)
   return path.join(os.homedir(), '.config', 'opencode');
 }
@@ -141,7 +141,7 @@ function getGlobalDir(runtime, explicitDir = null) {
     }
     return getOpencodeGlobalDir();
   }
-  
+
   if (runtime === 'gemini') {
     // Gemini: --config-dir > GEMINI_CONFIG_DIR > ~/.gemini
     if (explicitDir) {
@@ -163,7 +163,7 @@ function getGlobalDir(runtime, explicitDir = null) {
     }
     return path.join(os.homedir(), '.codex');
   }
-  
+
   // Claude Code: --config-dir > CLAUDE_CONFIG_DIR > ~/.claude
   if (explicitDir) {
     return expandTilde(explicitDir);
@@ -961,7 +961,7 @@ function convertClaudeToGeminiToml(content) {
 
   const frontmatter = content.substring(3, endIndex).trim();
   const body = content.substring(endIndex + 3).trim();
-  
+
   // Extract description from frontmatter
   let description = '';
   const lines = frontmatter.split('\n');
@@ -978,9 +978,9 @@ function convertClaudeToGeminiToml(content) {
   if (description) {
     toml += `description = ${JSON.stringify(description)}\n`;
   }
-  
+
   toml += `prompt = ${JSON.stringify(body)}\n`;
-  
+
   return toml;
 }
 
@@ -988,7 +988,7 @@ function convertClaudeToGeminiToml(content) {
  * Copy commands to a flat structure for OpenCode
  * OpenCode expects: command/gsd-help.md (invoked as /gsd-help)
  * Source structure: commands/gsd/help.md
- * 
+ *
  * @param {string} srcDir - Source directory (e.g., commands/gsd/)
  * @param {string} destDir - Destination directory (e.g., command/)
  * @param {string} prefix - Prefix for filenames (e.g., 'gsd')
@@ -999,7 +999,7 @@ function copyFlattenedCommands(srcDir, destDir, prefix, pathPrefix, runtime) {
   if (!fs.existsSync(srcDir)) {
     return;
   }
-  
+
   // Remove old gsd-*.md files before copying new ones
   if (fs.existsSync(destDir)) {
     for (const file of fs.readdirSync(destDir)) {
@@ -1010,12 +1010,12 @@ function copyFlattenedCommands(srcDir, destDir, prefix, pathPrefix, runtime) {
   } else {
     fs.mkdirSync(destDir, { recursive: true });
   }
-  
+
   const entries = fs.readdirSync(srcDir, { withFileTypes: true });
-  
+
   for (const entry of entries) {
     const srcPath = path.join(srcDir, entry.name);
-    
+
     if (entry.isDirectory()) {
       // Recurse into subdirectories, adding to prefix
       // e.g., commands/gsd/debug/start.md -> command/gsd-debug-start.md
@@ -1385,7 +1385,7 @@ function uninstall(isGlobal, runtime = 'claude') {
   // 4. Remove GSD hooks
   const hooksDir = path.join(targetDir, 'hooks');
   if (fs.existsSync(hooksDir)) {
-    const gsdHooks = ['gsd-statusline.js', 'gsd-check-update.js', 'gsd-check-update.sh', 'gsd-context-monitor.js'];
+    const gsdHooks = ['gsd-statusline.js', 'gsd-check-update.js', 'gsd-check-update.sh', 'gsd-context-monitor.js', 'gsd-security-gate.js', 'gsd-hook-profiles.js', 'gsd-suggest-compact.js', 'gsd-cost-tracker.js'];
     let hookCount = 0;
     for (const hook of gsdHooks) {
       const hookPath = path.join(hooksDir, hook);
@@ -1460,7 +1460,7 @@ function uninstall(isGlobal, runtime = 'claude') {
         settings.hooks[eventName] = settings.hooks[eventName].filter(entry => {
           if (entry.hooks && Array.isArray(entry.hooks)) {
             const hasGsdHook = entry.hooks.some(h =>
-              h.command && h.command.includes('gsd-context-monitor')
+              h.command && (h.command.includes('gsd-context-monitor') || h.command.includes('gsd-security-gate') || h.command.includes('gsd-suggest-compact') || h.command.includes('gsd-cost-tracker'))
             );
             return !hasGsdHook;
           }
@@ -1468,7 +1468,31 @@ function uninstall(isGlobal, runtime = 'claude') {
         });
         if (settings.hooks[eventName].length < before) {
           settingsModified = true;
-          console.log(`  ${green}✓${reset} Removed context monitor hook from settings`);
+          console.log(`  ${green}✓${reset} Removed GSD PostToolUse hooks from settings`);
+        }
+        if (settings.hooks[eventName].length === 0) {
+          delete settings.hooks[eventName];
+        }
+      }
+    }
+
+    // Remove GSD memory hooks from Stop and PreCompact
+    for (const eventName of ['Stop', 'PreCompact']) {
+      if (settings.hooks && settings.hooks[eventName]) {
+        const before = settings.hooks[eventName].length;
+        settings.hooks[eventName] = settings.hooks[eventName].filter(entry => {
+          if (entry.hooks && Array.isArray(entry.hooks)) {
+            const hasGsdHook = entry.hooks.some(h =>
+              (h.type === 'prompt' && h.prompt && h.prompt.includes('memory')) ||
+              (h.command && h.command.includes('gsd-cost-tracker'))
+            );
+            return !hasGsdHook;
+          }
+          return true;
+        });
+        if (settings.hooks[eventName].length < before) {
+          settingsModified = true;
+          console.log(`  ${green}✓${reset} Removed GSD hook from ${eventName}`);
         }
         if (settings.hooks[eventName].length === 0) {
           delete settings.hooks[eventName];
@@ -1646,7 +1670,7 @@ function configureOpencodePermissions(isGlobal = true) {
   const gsdPath = opencodeConfigDir === defaultConfigDir
     ? '~/.config/opencode/get-shit-done/*'
     : `${opencodeConfigDir.replace(/\\/g, '/')}/get-shit-done/*`;
-  
+
   let modified = false;
 
   // Configure read permission
@@ -1916,7 +1940,7 @@ function install(isGlobal, runtime = 'claude') {
     // OpenCode: flat structure in command/ directory
     const commandDir = path.join(targetDir, 'command');
     fs.mkdirSync(commandDir, { recursive: true });
-    
+
     // Copy commands/gsd/*.md as command/gsd-*.md (flatten structure)
     const gsdSrc = path.join(src, 'commands', 'gsd');
     copyFlattenedCommands(gsdSrc, commandDir, 'gsd', pathPrefix, runtime);
@@ -1940,7 +1964,7 @@ function install(isGlobal, runtime = 'claude') {
     // Claude Code & Gemini: nested structure in commands/ directory
     const commandsDir = path.join(targetDir, 'commands');
     fs.mkdirSync(commandsDir, { recursive: true });
-    
+
     const gsdSrc = path.join(src, 'commands', 'gsd');
     const gsdDest = path.join(commandsDir, 'gsd');
     copyWithPathReplacement(gsdSrc, gsdDest, pathPrefix, runtime, true);
@@ -2131,6 +2155,15 @@ function install(isGlobal, runtime = 'claude') {
   const contextMonitorCommand = isGlobal
     ? buildHookCommand(targetDir, 'gsd-context-monitor.js')
     : 'node ' + dirName + '/hooks/gsd-context-monitor.js';
+  const securityGateCommand = isGlobal
+    ? buildHookCommand(targetDir, 'gsd-security-gate.js')
+    : 'node ' + dirName + '/hooks/gsd-security-gate.js';
+  const suggestCompactCommand = isGlobal
+    ? buildHookCommand(targetDir, 'gsd-suggest-compact.js')
+    : 'node ' + dirName + '/hooks/gsd-suggest-compact.js';
+  const costTrackerCommand = isGlobal
+    ? buildHookCommand(targetDir, 'gsd-cost-tracker.js')
+    : 'node ' + dirName + '/hooks/gsd-cost-tracker.js';
 
   // Enable experimental agents for Gemini CLI (required for custom sub-agents)
   if (isGemini) {
@@ -2187,6 +2220,104 @@ function install(isGlobal, runtime = 'claude') {
         ]
       });
       console.log(`  ${green}✓${reset} Configured context window monitor hook`);
+    }
+
+    // Configure post-tool hook for security gate scanning
+    const hasSecurityGateHook = settings.hooks[postToolEvent].some(entry =>
+      entry.hooks && entry.hooks.some(h => h.command && h.command.includes('gsd-security-gate'))
+    );
+
+    if (!hasSecurityGateHook) {
+      settings.hooks[postToolEvent].push({
+        hooks: [
+          {
+            type: 'command',
+            command: securityGateCommand
+          }
+        ]
+      });
+      console.log(`  ${green}✓${reset} Configured security gate hook`);
+    }
+
+    // Configure post-tool hook for strategic compaction suggestions
+    const hasSuggestCompactHook = settings.hooks[postToolEvent].some(entry =>
+      entry.hooks && entry.hooks.some(h => h.command && h.command.includes('gsd-suggest-compact'))
+    );
+
+    if (!hasSuggestCompactHook) {
+      settings.hooks[postToolEvent].push({
+        hooks: [
+          {
+            type: 'command',
+            command: suggestCompactCommand
+          }
+        ]
+      });
+      console.log(`  ${green}✓${reset} Configured compaction suggestion hook`);
+    }
+
+    // Configure post-tool hook for cost tracking (accumulates metrics)
+    const hasCostTrackerPostHook = settings.hooks[postToolEvent].some(entry =>
+      entry.hooks && entry.hooks.some(h => h.command && h.command.includes('gsd-cost-tracker'))
+    );
+
+    if (!hasCostTrackerPostHook) {
+      settings.hooks[postToolEvent].push({
+        hooks: [
+          {
+            type: 'command',
+            command: costTrackerCommand
+          }
+        ]
+      });
+      console.log(`  ${green}✓${reset} Configured cost tracker hook (PostToolUse)`);
+    }
+
+    // Configure Stop hook for cost tracking (writes session summary)
+    if (!settings.hooks.Stop) {
+      settings.hooks.Stop = [];
+    }
+
+    const hasCostTrackerStopHook = settings.hooks.Stop.some(entry =>
+      entry.hooks && entry.hooks.some(h => h.command && h.command.includes('gsd-cost-tracker'))
+    );
+
+    if (!hasCostTrackerStopHook) {
+      settings.hooks.Stop.push({
+        hooks: [
+          {
+            type: 'command',
+            command: costTrackerCommand
+          }
+        ]
+      });
+      console.log(`  ${green}✓${reset} Configured cost tracker hook (Stop)`);
+    }
+
+    // Configure PreCompact hook for weighted memory updates (prompt-based, Claude-only)
+    // PreCompact fires before context compression — meaning it was a substantial session
+    // with learnings worth capturing. Much cheaper than Stop (which fires every response).
+    if (runtime === 'claude') {
+      if (!settings.hooks.PreCompact) {
+        settings.hooks.PreCompact = [];
+      }
+
+      const hasMemoryHook = settings.hooks.PreCompact.some(entry =>
+        entry.hooks && entry.hooks.some(h => h.type === 'prompt' && h.prompt && h.prompt.includes('memory'))
+      );
+
+      if (!hasMemoryHook) {
+        settings.hooks.PreCompact.push({
+          matcher: '*',
+          hooks: [
+            {
+              type: 'prompt',
+              prompt: 'Context is about to be compressed. Before that happens, capture anything worth remembering. Read MEMORY.md from the auto memory directory. Review what happened this session so far. Weight system: [W5] CRITICAL (architecture, user prefs), [W4] IMPORTANT (confirmed patterns, breakthroughs), [W3] USEFUL (working solutions), [W2] CONTEXT (project state, environment), [W1] OBSERVED (single-session, unconfirmed). Rules: Only add what helps a FUTURE session. New discoveries start at W1. Promote existing W1 to W3+ if confirmed this session. Fix wrong memories immediately. Increment prune counter, prune W1 after 5 sessions. Keep under 200 lines. If nothing worth remembering, do nothing. Return approve when done.'
+            }
+          ]
+        });
+        console.log(`  ${green}✓${reset} Configured memory capture hook (PreCompact)`);
+      }
     }
   }
 

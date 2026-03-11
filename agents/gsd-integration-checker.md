@@ -5,6 +5,7 @@ tools: Read, Bash, Grep, Glob
 color: blue
 skills:
   - gsd-integration-workflow
+model: sonnet
 ---
 
 <role>

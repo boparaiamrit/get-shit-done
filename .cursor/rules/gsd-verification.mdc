@@ -1,0 +1,62 @@
+---
+description: Verification rules — always verify work against acceptance criteria before completion
+globs: **/*
+alwaysApply: false
+---
+
+# GSD Verification Rules
+
+## Evidence Before Claims
+
+Never claim a task is complete without verification. This means:
+
+1. **Run the verify step** from the plan's `<verify>` section
+2. **Check observable behavior** — does the feature work as a user would experience it?
+3. **Run the full test suite** — not just tests for the current task, but all tests to catch regressions
+4. **Confirm against acceptance criteria** — cross-reference REQUIREMENTS.md REQ-IDs
+
+## Verification Levels
+
+### Task-Level (after each task)
+- Execute the `<verify>` check from the plan
+- Confirm the `<done>` criteria are met
+- Commit only after verification passes
+
+### Phase-Level (after all plans in a phase)
+- Run the full test suite to catch cross-phase regressions
+- Verify phase success criteria from ROADMAP.md
+- Create VERIFICATION.md with must-have checklist results
+
+### User Acceptance (manual testing)
+- Present testable deliverables as a batch checklist
+- Each test describes expected observable behavior
+- Issues are diagnosed with root cause analysis before fix planning
+
+## Regression Prevention
+
+After completing a phase, run the full test suite:
+
+```bash
+# Detect and run appropriate test runner
+npm test          # Node.js projects
+pytest            # Python projects
+cargo test        # Rust projects
+go test ./...     # Go projects
+```
+
+If tests fail after a phase that previously passed, this is a regression. Do not proceed to the next phase with failing tests.
+
+## Never Skip Verification
+
+- Do not mark a task as done without running its verify step
+- Do not move to the next phase without phase-level verification
+- Do not push code without confirming tests pass
+- Do not claim completion without evidence in the form of command output or test results
+
+## Verification File
+
+Phase verification creates `{phase_num}-VERIFICATION.md` containing:
+- Must-have checklist (derived from phase requirements)
+- Pass/fail status for each item
+- Evidence for each check (command output, file existence, test results)
+- Overall phase status: passed, gaps_found, or human_needed

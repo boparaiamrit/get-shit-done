@@ -5,6 +5,7 @@ tools: Read, Write, Edit, Bash, Grep, Glob, WebSearch
 color: orange
 skills:
   - gsd-debugger-workflow
+model: opus
 # hooks:
 #   PostToolUse:
 #     - matcher: "Write|Edit"

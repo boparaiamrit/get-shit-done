@@ -1,0 +1,8 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "slug": "get-shit-done",
+  "displayName": "Get Shit Done (GSD)",
+  "shortDescription": "Structured planning, execution & verification framework",
+  "category": "workflow",
+  "tags": ["planning", "project-management", "agents", "verification"]
+}

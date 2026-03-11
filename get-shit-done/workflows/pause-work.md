@@ -25,12 +25,14 @@ If no active phase detected, ask user which phase they're pausing work on.
 1. **Current position**: Which phase, which plan, which task
 2. **Work completed**: What got done this session
 3. **Work remaining**: What's left in current plan/phase
-4. **Decisions made**: Key decisions and rationale
-5. **Blockers/issues**: Anything stuck
-6. **Mental context**: The approach, next steps, "vibe"
-7. **Files modified**: What's changed but not committed
+4. **Key decisions made**: Important choices and their rationale — why this approach, what alternatives were considered
+5. **What did NOT work**: Failed approaches, dead ends, things that were tried and abandoned — and why they failed
+6. **Blockers/issues**: Anything stuck
+7. **Mental context**: The approach, next steps, "vibe"
+8. **Files modified**: What's changed but not committed
+9. **Session cost estimate**: Approximate token usage / turns taken this session
 
-Ask user for clarifications if needed via conversational questions.
+Ask user for clarifications if needed via conversational questions. Pay special attention to failed approaches — the next session MUST know what not to retry.
 </step>
 
 <step name="write">
@@ -63,11 +65,19 @@ last_updated: [timestamp from current-timestamp]
 - Task 5: Not started
 </remaining_work>
 
-<decisions_made>
+<key_decisions>
 
 - Decided to use [X] because [reason]
 - Chose [approach] over [alternative] because [reason]
-</decisions_made>
+- Rejected [option] because [reason]
+</key_decisions>
+
+<what_did_not_work>
+
+- **[Approach/strategy]**: [What was tried] → [Why it failed / what went wrong]
+- **[Dead end]**: [What was attempted] → [Why it was abandoned]
+- ⚠️ DO NOT retry these approaches unless you have a fundamentally different strategy
+</what_did_not_work>
 
 <blockers>
 - [Blocker 1]: [status/workaround]
@@ -76,6 +86,13 @@ last_updated: [timestamp from current-timestamp]
 <context>
 [Mental state, what were you thinking, the plan]
 </context>
+
+<session_cost_estimate>
+
+- Approximate turns: [N]
+- Approximate token usage: [low/medium/high]
+- Time spent: [estimate]
+</session_cost_estimate>
 
 <next_action>
 Start with: [specific first action when resuming]
@@ -117,6 +134,9 @@ To resume: /gsd:resume-work
 <success_criteria>
 - [ ] .continue-here.md created in correct phase directory
 - [ ] All sections filled with specific content
+- [ ] "What Did NOT Work" section explicitly documents failed approaches (even if none — state "No failed approaches this session")
+- [ ] "Key Decisions" section captures rationale, not just the choice
+- [ ] "Session Cost Estimate" section filled in
 - [ ] Committed as WIP
 - [ ] User knows location and how to resume
 </success_criteria>

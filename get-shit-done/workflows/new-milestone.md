@@ -1,6 +1,6 @@
 <purpose>
 
-Start a new milestone cycle for an existing project. Loads project context, gathers milestone goals (from MILESTONE-CONTEXT.md or conversation), updates PROJECT.md and STATE.md, optionally runs parallel research, defines scoped requirements with REQ-IDs, spawns the roadmapper to create phased execution plan, and commits all artifacts. Brownfield equivalent of new-project.
+Start a new milestone cycle for an existing project. Loads project context, proposes milestone scope using a recommendation-first approach (synthesizing from context, research, and conversation rather than interrogating), updates PROJECT.md and STATE.md, optionally runs parallel research, defines scoped requirements with REQ-IDs via a single proposal-and-approve cycle, spawns the roadmapper to create phased execution plan, and commits all artifacts. Brownfield equivalent of new-project.
 
 </purpose>
 
@@ -28,8 +28,57 @@ Read all files referenced by the invoking prompt's execution_context before star
 **If no context file:**
 - Present what shipped in last milestone
 - Ask inline (freeform, NOT AskUserQuestion): "What do you want to build next?"
-- Wait for their response, then use AskUserQuestion to probe specifics
-- If user selects "Other" at any point to provide freeform input, ask follow-up as plain text — not another AskUserQuestion
+- Wait for their response
+
+**After receiving user input (from either path), generate a Milestone Proposal:**
+
+Synthesize from the user's response, existing PROJECT.md, MILESTONES.md (what shipped, what was deferred), and STATE.md (pending items, accumulated context) to produce a proposal document:
+
+```
+# Milestone Proposal
+
+## What I Understand
+[Synthesize the user's stated goals with project history. Reference what shipped
+in the last milestone and how this builds on it. Call out any deferred items from
+previous milestones that are relevant.]
+
+## Recommended Scope
+### Decisions Made
+- [Decision]: [Reason based on what shipped + project context]
+- [Decision]: [Reason based on what shipped + project context]
+
+### Recommendations
+- [Topic]: Going with [X] because [reason]. Alt: [Y] if [condition].
+- [Topic]: Going with [X] because [reason]. Alt: [Y] if [condition].
+
+### Input Needed (max 3-5 items)
+Only items where the project context genuinely does not provide enough
+signal to make a recommendation. Each item still leads with a recommendation.
+
+- [Question]: My recommendation: [X] because [reason].
+- [Question]: My recommendation: [X] because [reason].
+
+## Proposed Features
+- [Feature 1] — [brief description, why it belongs in this milestone]
+- [Feature 2] — [brief description, why it belongs in this milestone]
+- [Feature 3] — [brief description, why it belongs in this milestone]
+
+## Deferred (not this milestone)
+- [Item] — [why it can wait]
+```
+
+Present the proposal inline, then use AskUserQuestion:
+- header: "Proposal"
+- question: "Does this milestone scope look right?"
+- options:
+  - "Approve and proceed" — Scope is good, continue to versioning
+  - "Override specific items" — I want to adjust some recommendations
+
+**If "Override specific items":**
+- Ask inline (freeform): "What would you like to change?"
+- Incorporate feedback into the proposal
+- Re-present the updated proposal with the same AskUserQuestion
+- Loop until approved
 
 ## 3. Determine Milestone Version
 
@@ -86,9 +135,22 @@ Extract from init JSON: `researcher_model`, `synthesizer_model`, `roadmapper_mod
 
 ## 8. Research Decision
 
-AskUserQuestion: "Research the domain ecosystem for new features before defining requirements?"
-- "Research first (Recommended)" — Discover patterns, features, architecture for NEW capabilities
-- "Skip research" — Go straight to requirements
+Auto-decide based on milestone context. Default to "Research first" because new milestone features benefit from ecosystem discovery, then allow override.
+
+Present the recommendation inline:
+
+```
+**Research recommendation:** Research first — new features ([list target features])
+benefit from discovering current patterns, integration approaches, and common
+pitfalls before defining requirements.
+```
+
+AskUserQuestion:
+- header: "Research"
+- question: "Research the domain ecosystem for new features before defining requirements?"
+- options:
+  - "Research first (Recommended)" — Discover patterns, features, architecture for NEW capabilities
+  - "Skip research" — I know this domain well, go straight to requirements
 
 **Persist choice to config** (so future `/gsd:plan-phase` honors it):
 
@@ -199,32 +261,40 @@ Read PROJECT.md: core value, current milestone goals, validated requirements (wh
 
 **If research exists:** Read FEATURES.md, extract feature categories.
 
-Present features by category:
+**Generate a Requirements Proposal** by synthesizing from the approved milestone scope (Step 2), research findings (if available), PROJECT.md validated requirements, and MILESTONES.md history. Present the full proposal inline:
+
 ```
-## [Category 1]
-**Table stakes:** Feature A, Feature B
-**Differentiators:** Feature C, Feature D
-**Research notes:** [any relevant notes]
+# Requirements Proposal for Milestone v[X.Y]
+
+## Context
+Building on [what exists] to add [milestone goal]. Based on [research findings
+summary / conversation context].
+
+## Proposed Requirements
+
+### [Category 1]
+**Table stakes** (users expect these):
+- [ ] **CAT1-01**: User can [specific, testable action]
+- [ ] **CAT1-02**: User can [specific, testable action]
+
+**Differentiators** (competitive advantage):
+- [ ] **CAT1-03**: User can [specific, testable action]
+
+### [Category 2]
+- [ ] **CAT2-01**: User can [specific, testable action]
+- [ ] **CAT2-02**: User can [specific, testable action]
+
+[... all categories ...]
+
+## Deferred to Future Milestone
+- [Feature] — [why it can wait: dependency on X, lower priority, etc.]
+
+## Out of Scope
+- [Feature] — [explicit reason for exclusion]
+
+## Decisions Embedded
+- [Decision]: [Rationale from milestone proposal + research]
 ```
-
-**If no research:** Gather requirements through conversation. Ask: "What are the main things users need to do with [new features]?" Clarify, probe for related capabilities, group into categories.
-
-**Scope each category** via AskUserQuestion (multiSelect: true, header max 12 chars):
-- "[Feature 1]" — [brief description]
-- "[Feature 2]" — [brief description]
-- "None for this milestone" — Defer entire category
-
-Track: Selected → this milestone. Unselected table stakes → future. Unselected differentiators → out of scope.
-
-**Identify gaps** via AskUserQuestion:
-- "No, research covered it" — Proceed
-- "Yes, let me add some" — Capture additions
-
-**Generate REQUIREMENTS.md:**
-- v1 Requirements grouped by category (checkboxes, REQ-IDs)
-- Future Requirements (deferred)
-- Out of Scope (explicit exclusions with reasoning)
-- Traceability section (empty, filled by roadmap)
 
 **REQ-ID format:** `[CATEGORY]-[NUMBER]` (AUTH-01, NOTIF-02). Continue numbering from existing.
 
@@ -236,22 +306,18 @@ Good requirements are:
 - **Atomic:** One capability per requirement (not "User can login and manage profile")
 - **Independent:** Minimal dependencies on other requirements
 
-Present FULL requirements list for confirmation:
+**Single approval gate** via AskUserQuestion:
+- header: "Requirements"
+- question: "Does this capture what you're building?"
+- options:
+  - "Approve requirements" — Looks good, proceed to roadmap
+  - "Adjust" — I want to change some requirements
 
-```
-## Milestone v[X.Y] Requirements
-
-### [Category 1]
-- [ ] **CAT1-01**: User can do X
-- [ ] **CAT1-02**: User can do Y
-
-### [Category 2]
-- [ ] **CAT2-01**: User can do Z
-
-Does this capture what you're building? (yes / adjust)
-```
-
-If "adjust": Return to scoping.
+**If "Adjust":**
+- Ask inline (freeform): "What would you like to change? (add, remove, reword, recategorize)"
+- Incorporate feedback into the requirements proposal
+- Re-present the updated proposal with the same AskUserQuestion
+- Loop until approved
 
 **Commit requirements:**
 ```bash
@@ -370,8 +436,11 @@ Also: `/gsd:plan-phase [N]` — skip discussion, plan directly
 - [ ] PROJECT.md updated with Current Milestone section
 - [ ] STATE.md reset for new milestone
 - [ ] MILESTONE-CONTEXT.md consumed and deleted (if existed)
+- [ ] Milestone Proposal generated with recommendations (not interrogation)
+- [ ] User approved milestone scope via single proposal-and-approve cycle
 - [ ] Research completed (if selected) — 4 parallel agents, milestone-aware
-- [ ] Requirements gathered and scoped per category
+- [ ] Requirements Proposal generated from approved scope + research
+- [ ] User approved requirements via single proposal-and-approve cycle
 - [ ] REQUIREMENTS.md created with REQ-IDs
 - [ ] gsd-roadmapper spawned with phase numbering context
 - [ ] Roadmap files written immediately (not draft)

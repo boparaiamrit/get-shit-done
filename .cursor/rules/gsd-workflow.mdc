@@ -1,0 +1,69 @@
+---
+description: Core GSD workflow rules — plan before coding, verify before claiming done
+globs: **/*
+alwaysApply: true
+---
+
+# GSD Workflow Rules
+
+You are working in a project that uses **Get Shit Done (GSD)** — a spec-driven development system. All work follows a structured cycle. Never skip steps.
+
+## The GSD Cycle
+
+Every feature follows this loop:
+
+1. **Discuss** — Clarify implementation decisions before planning (`discuss-phase`)
+2. **Plan** — Research the domain, create atomic task plans, verify them (`plan-phase`)
+3. **Execute** — Run plans in parallel waves with fresh context per plan (`execute-phase`)
+4. **Verify** — Confirm deliverables against acceptance criteria (`verify-work`)
+
+Repeat for each phase in the roadmap until the milestone is complete.
+
+## Core Principles
+
+- **Plan before code.** Never start implementing without a plan in `.planning/`. Read the relevant PLAN.md before writing any code.
+- **Verify before claiming done.** Run tests, check acceptance criteria, and confirm observable user behavior before marking a task complete.
+- **Evidence before claims.** Never say "done" without verification output. Run the command, read the result.
+- **Root cause before fixes.** Never patch symptoms. Diagnose the actual problem first.
+- **Fresh context per task.** Each plan is designed to execute in isolation. Load only what the plan specifies.
+
+## Project Structure
+
+All planning artifacts live in `.planning/`:
+
+```
+.planning/
+  PROJECT.md          # Vision, goals, constraints
+  REQUIREMENTS.md     # Scoped requirements with REQ-IDs
+  ROADMAP.md          # Phases mapped to requirements
+  STATE.md            # Current position, decisions, blockers
+  config.json         # Workflow settings
+  research/           # Domain research (stack, features, architecture, pitfalls)
+  phases/
+    01-phase-name/    # Per-phase directory
+      01-CONTEXT.md   # Implementation decisions
+      01-RESEARCH.md  # Phase-specific research
+      01-01-PLAN.md   # Atomic task plan
+      01-01-SUMMARY.md # Execution record
+      01-VERIFICATION.md # Goal verification
+```
+
+## Before Writing Code
+
+1. Check `.planning/STATE.md` for current position
+2. Read the relevant PLAN.md for the task you are executing
+3. Follow the plan's `<action>` instructions precisely
+4. Run the plan's `<verify>` checks after implementation
+5. Commit atomically per task using conventional commit format
+
+## Atomic Commits
+
+Each task gets its own commit immediately after completion:
+
+```
+feat(01-02): add email confirmation flow
+fix(03-01): resolve race condition in checkout
+docs(02-01): complete API documentation plan
+```
+
+Format: `type(phase-plan): description`

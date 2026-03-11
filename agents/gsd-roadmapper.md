@@ -5,6 +5,7 @@ tools: Read, Write, Bash, Glob, Grep
 color: purple
 skills:
   - gsd-roadmapper-workflow
+model: opus
 # hooks:
 #   PostToolUse:
 #     - matcher: "Write|Edit"

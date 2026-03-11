@@ -1,0 +1,75 @@
+---
+description: Git workflow rules — atomic commits, conventional format, planning directory conventions
+globs: **/*
+alwaysApply: false
+---
+
+# GSD Git Workflow Rules
+
+## Atomic Commits Per Task
+
+Every task in a plan gets its own commit immediately after completion. Never batch multiple tasks into a single commit.
+
+### Commit Format
+
+Use conventional commit format with phase-plan scope:
+
+```
+type(phase-plan): description
+```
+
+**Types:**
+- `feat` — New feature or capability
+- `fix` — Bug fix
+- `docs` — Documentation or planning artifacts
+- `refactor` — Code restructuring without behavior change
+- `test` — Adding or updating tests
+- `chore` — Tooling, config, dependencies
+
+**Examples:**
+```
+feat(01-02): add email confirmation flow
+fix(03-01): resolve race condition in checkout
+docs(02-01): complete API documentation plan
+refactor(04-03): extract shared validation logic
+test(01-01): add unit tests for user model
+chore(05-02): update dependency versions
+```
+
+## Planning Directory Commits
+
+Planning artifacts (`.planning/`) use dedicated commit types:
+
+```
+docs: initialize project                          # PROJECT.md creation
+docs: define v1 requirements                      # REQUIREMENTS.md
+docs: create roadmap (8 phases)                   # ROADMAP.md
+docs(03): capture phase context                   # CONTEXT.md
+docs(03): complete phase research                 # RESEARCH.md
+docs(phase-03): complete phase execution          # Phase completion
+docs(state): record phase 3 context session       # STATE.md updates
+test(03): complete UAT - 6 passed, 0 issues       # UAT results
+chore: add project config                         # config.json
+```
+
+## Branching Strategies
+
+GSD supports three branching strategies (configured in `.planning/config.json`):
+
+- **none** (default) — Commit directly to current branch
+- **phase** — Create a branch per phase, merge at phase completion
+- **milestone** — One branch for entire milestone, merge at completion
+
+## Rules
+
+1. **Never skip verification before committing.** Run the task's verify step first.
+2. **Never batch unrelated changes.** One task = one commit.
+3. **Never force push to shared branches** without explicit team agreement.
+4. **Commit planning docs** when `commit_docs` is true in config (default). This tracks planning decisions in version control.
+5. **Tag milestone completions** using `v{version}` format when a milestone is archived.
+
+## Commit Timing
+
+- Commit each task immediately after its verify step passes
+- Commit planning artifacts at each workflow step (not batched at the end)
+- If context is lost mid-execution, committed artifacts persist and enable resumption

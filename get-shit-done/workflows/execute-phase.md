@@ -250,6 +250,75 @@ After all waves:
 ```
 </step>
 
+<step name="regression_check">
+**Run full test suite to catch cross-phase regressions.**
+
+After completing all wave execution, run the project's full test suite — not just tests from this phase.
+
+**Step 1: Detect test runner**
+```bash
+# Check for test configuration
+if [ -f "package.json" ]; then
+  TEST_CMD="npm test"
+elif [ -f "pyproject.toml" ] || [ -f "setup.py" ]; then
+  TEST_CMD="pytest"
+elif [ -f "Cargo.toml" ]; then
+  TEST_CMD="cargo test"
+elif [ -f "go.mod" ]; then
+  TEST_CMD="go test ./..."
+else
+  TEST_CMD=""
+fi
+```
+
+**Step 2: Run full suite (if test runner detected)**
+```bash
+if [ -n "$TEST_CMD" ]; then
+  echo "Running full test suite: $TEST_CMD"
+  $TEST_CMD 2>&1
+fi
+```
+
+**Step 3: Evaluate results**
+
+**If no test runner detected:** Skip regression check, note in results:
+```
+Regression check: SKIPPED (no test runner detected)
+```
+
+**If all tests pass:**
+```
+Regression check: PASSED — full suite green
+```
+Continue to next step.
+
+**If tests fail:**
+```
+⚠ REGRESSION DETECTED
+
+{N} test(s) failed after Phase {X} execution.
+
+Failing tests:
+- {test name}: {error}
+
+These tests passed before this phase — this is a regression.
+```
+
+**CRITICAL: Do NOT proceed to next phase with failing tests.**
+
+Use AskUserQuestion:
+- header: "Regression"
+- question: "Regression detected: {N} tests fail. How to proceed?"
+- options:
+  - "Fix now" — Spawn debug agent to diagnose and fix
+  - "Skip and continue" — Accept regression, proceed (not recommended)
+  - "Abort" — Stop execution, user investigates manually
+
+If "Fix now": Spawn gsd-debugger agent to diagnose, then re-run full suite to verify fix.
+If "Skip": Note regression in execution summary, continue.
+If "Abort": Exit with regression report.
+</step>
+
 <step name="close_parent_artifacts">
 **For decimal/polish phases only (X.Y pattern):** Close the feedback loop by resolving parent UAT and debug artifacts.
 
@@ -457,3 +526,12 @@ Re-run `/gsd:execute-phase {phase}` → discover_plans finds completed SUMMARYs 
 
 STATE.md tracks: last completed plan, current wave, pending checkpoints.
 </resumption>
+
+<success_criteria>
+- All plans in phase executed and committed
+- SUMMARY.md created for each plan
+- STATE.md and ROADMAP.md updated with progress
+- Full test suite run after execution (cross-phase regression check)
+- No regressions introduced (or user acknowledged and accepted)
+- Phase verification completed (VERIFICATION.md created)
+</success_criteria>

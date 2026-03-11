@@ -5,6 +5,7 @@ tools: Read, Write, Bash
 color: purple
 skills:
   - gsd-synthesizer-workflow
+model: sonnet
 # hooks:
 #   PostToolUse:
 #     - matcher: "Write|Edit"

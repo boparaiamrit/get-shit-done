@@ -5,6 +5,7 @@ tools: Read, Write, Bash, Grep, Glob, WebSearch, WebFetch, mcp__context7__*
 color: cyan
 skills:
   - gsd-researcher-workflow
+model: sonnet
 # hooks:
 #   PostToolUse:
 #     - matcher: "Write|Edit"

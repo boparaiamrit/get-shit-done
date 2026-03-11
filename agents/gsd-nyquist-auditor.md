@@ -11,6 +11,7 @@ tools:
 color: "#8B5CF6"
 skills:
   - gsd-nyquist-auditor-workflow
+model: sonnet
 ---
 
 <role>

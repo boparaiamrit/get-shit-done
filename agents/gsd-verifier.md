@@ -5,6 +5,7 @@ tools: Read, Write, Bash, Grep, Glob
 color: green
 skills:
   - gsd-verifier-workflow
+model: opus
 # hooks:
 #   PostToolUse:
 #     - matcher: "Write|Edit"

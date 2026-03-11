@@ -1,0 +1,2003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GSD — Get Shit Done | Command Reference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+  :root {
+    --bg-deep: #0a0a0f;
+    --bg-panel: #0f1117;
+    --bg-card: #141620;
+    --bg-card-hover: #1a1d2e;
+    --bg-highlight: #1e2235;
+    --border: #1e2235;
+    --border-bright: #2a2f45;
+    --text: #c8cdd8;
+    --text-dim: #6b7394;
+    --text-bright: #e8ecf4;
+    --green: #4ade80;
+    --green-dim: #166534;
+    --green-glow: rgba(74, 222, 128, 0.15);
+    --cyan: #22d3ee;
+    --cyan-dim: #164e63;
+    --yellow: #facc15;
+    --yellow-dim: #713f12;
+    --orange: #fb923c;
+    --red: #f87171;
+    --purple: #a78bfa;
+    --pink: #f472b6;
+    --blue: #60a5fa;
+    --mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --display: 'Space Mono', monospace;
+    --sidebar-w: 260px;
+    --scanline-opacity: 0.03;
+  }
+
+  html { scroll-behavior: smooth; font-size: 14px; }
+
+  body {
+    font-family: var(--mono);
+    background: var(--bg-deep);
+    color: var(--text);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* ═══ CRT Scanline overlay ═══ */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, var(--scanline-opacity)) 2px,
+      rgba(0, 0, 0, var(--scanline-opacity)) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* ═══ Noise texture ═══ */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9998;
+  }
+
+  ::selection { background: var(--green); color: var(--bg-deep); }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg-deep); }
+  ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+  /* ═══ SIDEBAR ═══ */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: var(--sidebar-w);
+    height: 100vh;
+    background: var(--bg-panel);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease;
+  }
+
+  .sidebar-header {
+    padding: 24px 20px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    font-family: var(--display);
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--green);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    text-shadow: 0 0 20px var(--green-glow), 0 0 40px rgba(74, 222, 128, 0.08);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    width: 28px;
+    height: 28px;
+    border: 2px solid var(--green);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    box-shadow: 0 0 10px var(--green-glow);
+  }
+
+  .logo-sub {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 1.5px;
+    margin-top: 4px;
+    font-weight: 400;
+  }
+
+  .sidebar-search {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .search-box {
+    width: 100%;
+    padding: 8px 12px 8px 32px;
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .search-box:focus {
+    border-color: var(--green);
+    box-shadow: 0 0 0 2px var(--green-glow);
+  }
+
+  .search-wrap {
+    position: relative;
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-dim);
+    font-size: 0.75rem;
+  }
+
+  .sidebar-nav {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+  }
+
+  .nav-category {
+    padding: 12px 20px 4px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 20px 5px 28px;
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 0.78rem;
+    transition: all 0.15s;
+    border-left: 2px solid transparent;
+    cursor: pointer;
+  }
+
+  .nav-link:hover {
+    color: var(--text);
+    background: var(--bg-highlight);
+    border-left-color: var(--border-bright);
+  }
+
+  .nav-link.active {
+    color: var(--green);
+    background: var(--green-glow);
+    border-left-color: var(--green);
+  }
+
+  .nav-link .cmd-prefix { color: var(--text-dim); }
+
+  .sidebar-footer {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    font-size: 0.65rem;
+    color: var(--text-dim);
+  }
+
+  .sidebar-footer a { color: var(--green); text-decoration: none; }
+  .sidebar-footer a:hover { text-decoration: underline; }
+
+  /* ═══ MOBILE TOGGLE ═══ */
+  .menu-toggle {
+    display: none;
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 200;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    color: var(--green);
+    width: 36px;
+    height: 36px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 1rem;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ═══ MAIN ═══ */
+  .main {
+    margin-left: var(--sidebar-w);
+    min-height: 100vh;
+  }
+
+  /* ═══ HERO ═══ */
+  .hero {
+    padding: 80px 48px 48px;
+    border-bottom: 1px solid var(--border);
+    background:
+      radial-gradient(ellipse 60% 40% at 50% 0%, rgba(74, 222, 128, 0.06) 0%, transparent 70%),
+      var(--bg-deep);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--green), transparent);
+    opacity: 0.5;
+  }
+
+  .hero-terminal {
+    max-width: 800px;
+  }
+
+  .hero-prompt {
+    font-family: var(--display);
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .hero-prompt span { color: var(--green); }
+
+  .hero h1 {
+    font-family: var(--display);
+    font-size: 2.6rem;
+    font-weight: 700;
+    color: var(--text-bright);
+    line-height: 1.15;
+    margin-bottom: 16px;
+    letter-spacing: -0.5px;
+  }
+
+  .hero h1 em {
+    font-style: normal;
+    color: var(--green);
+    text-shadow: 0 0 30px var(--green-glow);
+  }
+
+  .hero-desc {
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    max-width: 600px;
+    line-height: 1.7;
+    margin-bottom: 28px;
+  }
+
+  .hero-stats {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--green);
+    font-family: var(--display);
+  }
+
+  .stat-label {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+  }
+
+  /* ═══ CONTENT ═══ */
+  .content {
+    padding: 32px 48px 80px;
+    max-width: 960px;
+  }
+
+  /* ═══ CATEGORY SECTION ═══ */
+  .category-section {
+    margin-bottom: 48px;
+  }
+
+  .category-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .category-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+  }
+
+  .category-header h2 {
+    font-family: var(--display);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-bright);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .category-header .cmd-count {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    margin-left: auto;
+    background: var(--bg-highlight);
+    padding: 2px 10px;
+    border-radius: 10px;
+  }
+
+  .cat-setup .category-icon { background: var(--green-dim); color: var(--green); }
+  .cat-planning .category-icon { background: rgba(96, 165, 250, 0.15); color: var(--blue); }
+  .cat-execution .category-icon { background: rgba(250, 204, 21, 0.15); color: var(--yellow); }
+  .cat-verification .category-icon { background: rgba(167, 139, 250, 0.15); color: var(--purple); }
+  .cat-management .category-icon { background: rgba(251, 146, 60, 0.15); color: var(--orange); }
+  .cat-session .category-icon { background: rgba(34, 211, 238, 0.15); color: var(--cyan); }
+  .cat-advanced .category-icon { background: rgba(244, 114, 182, 0.15); color: var(--pink); }
+  .cat-utilities .category-icon { background: rgba(200,205,216, 0.1); color: var(--text-dim); }
+
+  /* ═══ COMMAND CARD ═══ */
+  .cmd-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 8px;
+    overflow: hidden;
+    transition: all 0.2s;
+  }
+
+  .cmd-card:hover {
+    border-color: var(--border-bright);
+    background: var(--bg-card-hover);
+  }
+
+  .cmd-card.expanded {
+    border-color: var(--green);
+    box-shadow: 0 0 0 1px var(--green-glow), 0 4px 24px rgba(0,0,0,0.3);
+  }
+
+  .cmd-card-header {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    cursor: pointer;
+    user-select: none;
+    gap: 12px;
+  }
+
+  .cmd-name {
+    font-weight: 600;
+    color: var(--green);
+    font-size: 0.85rem;
+    white-space: nowrap;
+    min-width: 180px;
+  }
+
+  .cmd-desc {
+    color: var(--text-dim);
+    font-size: 0.78rem;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cmd-expand-icon {
+    color: var(--text-dim);
+    font-size: 0.7rem;
+    transition: transform 0.2s;
+    flex-shrink: 0;
+    width: 16px;
+    text-align: center;
+  }
+
+  .cmd-card.expanded .cmd-expand-icon { transform: rotate(90deg); color: var(--green); }
+
+  .cmd-card-body {
+    display: none;
+    padding: 0 16px 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  .cmd-card.expanded .cmd-card-body { display: block; }
+
+  .cmd-section {
+    margin-top: 14px;
+  }
+
+  .cmd-section-title {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 6px;
+  }
+
+  .cmd-usage {
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 14px;
+    font-size: 0.8rem;
+    color: var(--text-bright);
+    position: relative;
+    overflow-x: auto;
+  }
+
+  .cmd-usage .prompt-char { color: var(--green); }
+  .cmd-usage .flag { color: var(--yellow); }
+  .cmd-usage .arg { color: var(--cyan); }
+  .cmd-usage .comment { color: var(--text-dim); font-style: italic; }
+
+  .copy-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: var(--bg-highlight);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    padding: 3px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .copy-btn:hover { color: var(--green); border-color: var(--green); }
+  .copy-btn.copied { color: var(--green); border-color: var(--green); }
+
+  .cmd-flags {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .cmd-flag {
+    display: flex;
+    gap: 12px;
+    align-items: baseline;
+    font-size: 0.78rem;
+  }
+
+  .cmd-flag code {
+    color: var(--yellow);
+    background: rgba(250, 204, 21, 0.08);
+    padding: 1px 6px;
+    border-radius: 3px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .cmd-flag span { color: var(--text-dim); }
+
+  .cmd-output {
+    font-size: 0.78rem;
+    color: var(--text-dim);
+  }
+
+  .cmd-output code {
+    color: var(--cyan);
+    background: rgba(34, 211, 238, 0.08);
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
+
+  .cmd-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+
+  .cmd-tag {
+    font-size: 0.6rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--bg-highlight);
+    color: var(--text-dim);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  /* ═══ WORKFLOW DIAGRAM ═══ */
+  .workflow-section {
+    margin: 48px 0;
+    padding: 32px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .workflow-section h3 {
+    font-family: var(--display);
+    font-size: 0.85rem;
+    color: var(--text-bright);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+
+  .workflow-flow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0;
+    font-size: 0.75rem;
+  }
+
+  .flow-step {
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-weight: 600;
+    white-space: nowrap;
+    position: relative;
+  }
+
+  .flow-arrow {
+    color: var(--text-dim);
+    padding: 0 6px;
+    font-size: 0.9rem;
+  }
+
+  .flow-step.setup { background: var(--green-dim); color: var(--green); }
+  .flow-step.plan { background: rgba(96, 165, 250, 0.15); color: var(--blue); }
+  .flow-step.exec { background: rgba(250, 204, 21, 0.15); color: var(--yellow); }
+  .flow-step.verify { background: rgba(167, 139, 250, 0.15); color: var(--purple); }
+  .flow-step.ship { background: rgba(244, 114, 182, 0.15); color: var(--pink); }
+
+  /* ═══ INSTALL SECTION ═══ */
+  .install-section {
+    margin: 32px 0;
+    padding: 24px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .install-section h3 {
+    font-family: var(--display);
+    font-size: 0.85rem;
+    color: var(--text-bright);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .install-cmd {
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 18px;
+    font-size: 0.9rem;
+    color: var(--green);
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .install-cmd .dollar { color: var(--text-dim); }
+
+  /* ═══ KEYBOARD HINT ═══ */
+  .kbd-hint {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+
+  .kbd-hint:hover { opacity: 1; }
+
+  kbd {
+    background: var(--bg-highlight);
+    border: 1px solid var(--border-bright);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--text);
+  }
+
+  /* ═══ RESPONSIVE ═══ */
+  @media (max-width: 840px) {
+    .sidebar { transform: translateX(-100%); }
+    .sidebar.open { transform: translateX(0); box-shadow: 4px 0 24px rgba(0,0,0,0.5); }
+    .menu-toggle { display: flex; }
+    .main { margin-left: 0; }
+    .hero { padding: 60px 24px 36px; }
+    .hero h1 { font-size: 1.8rem; }
+    .content { padding: 24px; }
+    .cmd-name { min-width: 140px; }
+    .kbd-hint { display: none; }
+  }
+
+  /* ═══ ANIMATIONS ═══ */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .category-section {
+    animation: fadeInUp 0.4s ease both;
+  }
+
+  .category-section:nth-child(2) { animation-delay: 0.05s; }
+  .category-section:nth-child(3) { animation-delay: 0.1s; }
+  .category-section:nth-child(4) { animation-delay: 0.15s; }
+  .category-section:nth-child(5) { animation-delay: 0.2s; }
+  .category-section:nth-child(6) { animation-delay: 0.25s; }
+  .category-section:nth-child(7) { animation-delay: 0.3s; }
+  .category-section:nth-child(8) { animation-delay: 0.35s; }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  .cursor-blink {
+    display: inline-block;
+    width: 8px;
+    height: 16px;
+    background: var(--green);
+    animation: blink 1s step-end infinite;
+    vertical-align: middle;
+    margin-left: 2px;
+  }
+
+  .no-results {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    display: none;
+  }
+
+  .no-results .big { font-size: 2rem; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+
+<!-- Mobile menu toggle -->
+<button class="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation">&#9776;</button>
+
+<!-- ═══ SIDEBAR ═══ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="logo">
+      <div class="logo-icon">&gt;_</div>
+      GSD
+    </div>
+    <div class="logo-sub">get shit done &mdash; command reference</div>
+  </div>
+
+  <div class="sidebar-search">
+    <div class="search-wrap">
+      <span class="search-icon">/</span>
+      <input type="text" class="search-box" id="searchInput" placeholder="Search commands..." autocomplete="off" spellcheck="false">
+    </div>
+  </div>
+
+  <nav class="sidebar-nav" id="sidebarNav">
+    <div class="nav-category">Project Setup</div>
+    <a class="nav-link" data-target="new-project"><span class="cmd-prefix">/</span>new-project</a>
+    <a class="nav-link" data-target="new-milestone"><span class="cmd-prefix">/</span>new-milestone</a>
+
+    <div class="nav-category">Planning</div>
+    <a class="nav-link" data-target="discuss-phase"><span class="cmd-prefix">/</span>discuss-phase</a>
+    <a class="nav-link" data-target="research-phase"><span class="cmd-prefix">/</span>research-phase</a>
+    <a class="nav-link" data-target="plan-phase"><span class="cmd-prefix">/</span>plan-phase</a>
+    <a class="nav-link" data-target="list-phase-assumptions"><span class="cmd-prefix">/</span>list-phase-assumptions</a>
+    <a class="nav-link" data-target="map-codebase"><span class="cmd-prefix">/</span>map-codebase</a>
+
+    <div class="nav-category">Execution</div>
+    <a class="nav-link" data-target="execute-phase"><span class="cmd-prefix">/</span>execute-phase</a>
+    <a class="nav-link" data-target="quick"><span class="cmd-prefix">/</span>quick</a>
+    <a class="nav-link" data-target="loop"><span class="cmd-prefix">/</span>loop</a>
+
+    <div class="nav-category">Verification</div>
+    <a class="nav-link" data-target="verify-work"><span class="cmd-prefix">/</span>verify-work</a>
+    <a class="nav-link" data-target="quality-gate"><span class="cmd-prefix">/</span>quality-gate</a>
+    <a class="nav-link" data-target="add-tests"><span class="cmd-prefix">/</span>add-tests</a>
+    <a class="nav-link" data-target="validate-phase"><span class="cmd-prefix">/</span>validate-phase</a>
+    <a class="nav-link" data-target="security-scan"><span class="cmd-prefix">/</span>security-scan</a>
+
+    <div class="nav-category">Management</div>
+    <a class="nav-link" data-target="add-phase"><span class="cmd-prefix">/</span>add-phase</a>
+    <a class="nav-link" data-target="insert-phase"><span class="cmd-prefix">/</span>insert-phase</a>
+    <a class="nav-link" data-target="remove-phase"><span class="cmd-prefix">/</span>remove-phase</a>
+    <a class="nav-link" data-target="complete-milestone"><span class="cmd-prefix">/</span>complete-milestone</a>
+    <a class="nav-link" data-target="audit-milestone"><span class="cmd-prefix">/</span>audit-milestone</a>
+    <a class="nav-link" data-target="plan-milestone-gaps"><span class="cmd-prefix">/</span>plan-milestone-gaps</a>
+    <a class="nav-link" data-target="cleanup"><span class="cmd-prefix">/</span>cleanup</a>
+    <a class="nav-link" data-target="checkpoint"><span class="cmd-prefix">/</span>checkpoint</a>
+
+    <div class="nav-category">Session</div>
+    <a class="nav-link" data-target="pause-work"><span class="cmd-prefix">/</span>pause-work</a>
+    <a class="nav-link" data-target="resume-work"><span class="cmd-prefix">/</span>resume-work</a>
+    <a class="nav-link" data-target="progress"><span class="cmd-prefix">/</span>progress</a>
+    <a class="nav-link" data-target="context"><span class="cmd-prefix">/</span>context</a>
+    <a class="nav-link" data-target="remember"><span class="cmd-prefix">/</span>remember</a>
+    <a class="nav-link" data-target="learn"><span class="cmd-prefix">/</span>learn</a>
+
+    <div class="nav-category">Advanced</div>
+    <a class="nav-link" data-target="orchestrate"><span class="cmd-prefix">/</span>orchestrate</a>
+    <a class="nav-link" data-target="debug"><span class="cmd-prefix">/</span>debug</a>
+    <a class="nav-link" data-target="set-profile"><span class="cmd-prefix">/</span>set-profile</a>
+    <a class="nav-link" data-target="settings"><span class="cmd-prefix">/</span>settings</a>
+
+    <div class="nav-category">Utilities</div>
+    <a class="nav-link" data-target="help"><span class="cmd-prefix">/</span>help</a>
+    <a class="nav-link" data-target="health"><span class="cmd-prefix">/</span>health</a>
+    <a class="nav-link" data-target="check-todos"><span class="cmd-prefix">/</span>check-todos</a>
+    <a class="nav-link" data-target="add-todo"><span class="cmd-prefix">/</span>add-todo</a>
+    <a class="nav-link" data-target="update"><span class="cmd-prefix">/</span>update</a>
+    <a class="nav-link" data-target="join-discord"><span class="cmd-prefix">/</span>join-discord</a>
+  </nav>
+
+  <div class="sidebar-footer">
+    v1.22.4 &middot; <a href="https://github.com/get-shit-done-cmd/get-shit-done" target="_blank">GitHub</a> &middot; MIT
+  </div>
+</aside>
+
+<!-- ═══ MAIN ═══ -->
+<div class="main">
+
+  <!-- ═══ HERO ═══ -->
+  <section class="hero">
+    <div class="hero-terminal">
+      <div class="hero-prompt"><span>$</span> gsd --help<span class="cursor-blink"></span></div>
+      <h1>Get Shit <em>Done</em></h1>
+      <p class="hero-desc">
+        A markdown-based prompt engineering framework that makes AI assistants
+        think like senior staff engineers. Structured planning, execution,
+        and verification for any codebase.
+      </p>
+      <div class="hero-stats">
+        <div class="stat"><span class="stat-value">40</span><span class="stat-label">Commands</span></div>
+        <div class="stat"><span class="stat-value">34</span><span class="stat-label">Workflows</span></div>
+        <div class="stat"><span class="stat-value">12</span><span class="stat-label">Agents</span></div>
+        <div class="stat"><span class="stat-value">8</span><span class="stat-label">Categories</span></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="content">
+
+    <!-- ═══ INSTALL ═══ -->
+    <div class="install-section">
+      <h3>Quick Install</h3>
+      <div class="install-cmd">
+        <span class="dollar">$</span> npx get-shit-done@latest init
+        <button class="copy-btn" onclick="copyText('npx get-shit-done@latest init', this)">copy</button>
+      </div>
+    </div>
+
+    <!-- ═══ WORKFLOW ═══ -->
+    <div class="workflow-section">
+      <h3>Core Workflow</h3>
+      <div class="workflow-flow">
+        <div class="flow-step setup">/new-project</div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-step plan">/discuss-phase</div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-step plan">/plan-phase</div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-step exec">/execute-phase</div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-step verify">/verify-work</div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-step ship">/complete-milestone</div>
+      </div>
+    </div>
+
+    <div class="no-results" id="noResults">
+      <div class="big">_</div>
+      No commands match your search.<br>Try a different term.
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- PROJECT SETUP -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section class="category-section cat-setup" id="cat-setup">
+      <div class="category-header">
+        <div class="category-icon">&#9654;</div>
+        <h2>Project Setup</h2>
+        <span class="cmd-count">2 commands</span>
+      </div>
+
+      <div class="cmd-card" id="new-project" data-search="new-project initialize project context gathering auto">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:new-project</span>
+          <span class="cmd-desc">Initialize a new project with deep context gathering</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:new-project<br>
+              <span class="prompt-char">$</span> /gsd:new-project <span class="flag">--auto</span> <span class="arg">@idea-document.md</span>
+              <button class="copy-btn" onclick="copyText('/gsd:new-project', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Flags</div>
+            <div class="cmd-flags">
+              <div class="cmd-flag"><code>--auto</code> <span>Skip interactive questions, run research &rarr; requirements &rarr; roadmap automatically</span></div>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Creates</div>
+            <div class="cmd-output">
+              <code>.planning/PROJECT.md</code> &middot;
+              <code>config.json</code> &middot;
+              <code>REQUIREMENTS.md</code> &middot;
+              <code>ROADMAP.md</code> &middot;
+              <code>STATE.md</code>
+            </div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">greenfield</span><span class="cmd-tag">init</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="new-milestone" data-search="new-milestone brownfield milestone version cycle">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:new-milestone</span>
+          <span class="cmd-desc">Start a new milestone cycle &mdash; update PROJECT.md and route to requirements</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:new-milestone<br>
+              <span class="prompt-char">$</span> /gsd:new-milestone <span class="arg">v1.1 Notifications</span>
+              <button class="copy-btn" onclick="copyText('/gsd:new-milestone', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Details</div>
+            <div class="cmd-output">Brownfield equivalent of new-project. Updates <code>PROJECT.md</code> with new goals, runs requirements &rarr; roadmap cycle. Continues phase numbering.</div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">brownfield</span><span class="cmd-tag">iteration</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- PLANNING -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section class="category-section cat-planning" id="cat-planning">
+      <div class="category-header">
+        <div class="category-icon">&#9733;</div>
+        <h2>Planning</h2>
+        <span class="cmd-count">5 commands</span>
+      </div>
+
+      <div class="cmd-card" id="discuss-phase" data-search="discuss-phase context questioning decisions gray areas adaptive auto">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:discuss-phase</span>
+          <span class="cmd-desc">Gather phase context through adaptive questioning before planning</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:discuss-phase <span class="arg">1</span><br>
+              <span class="prompt-char">$</span> /gsd:discuss-phase <span class="arg">2</span> <span class="flag">--auto</span>
+              <button class="copy-btn" onclick="copyText('/gsd:discuss-phase 1', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Flags</div>
+            <div class="cmd-flags">
+              <div class="cmd-flag"><code>--auto</code> <span>Auto-resolve gray areas using codebase analysis instead of asking</span></div>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Output</div>
+            <div class="cmd-output"><code>{phase}-CONTEXT.md</code> &mdash; Decisions clear enough that downstream agents can act without asking</div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">interactive</span><span class="cmd-tag">decisions</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="research-phase" data-search="research-phase investigate feasibility standalone">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:research-phase</span>
+          <span class="cmd-desc">Research how to implement a phase (standalone)</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:research-phase <span class="arg">3</span>
+              <button class="copy-btn" onclick="copyText('/gsd:research-phase 3', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Details</div>
+            <div class="cmd-output">Spawns <code>gsd-phase-researcher</code> agent. Use when you want to research without committing to plan yet. Usually called automatically by plan-phase.</div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">research</span><span class="cmd-tag">agent</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="plan-phase" data-search="plan-phase plan create executable research verify gaps prd auto skip">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:plan-phase</span>
+          <span class="cmd-desc">Create detailed phase plan (PLAN.md) with verification loop</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:plan-phase <span class="arg">1</span><br>
+              <span class="prompt-char">$</span> /gsd:plan-phase <span class="arg">2</span> <span class="flag">--auto --skip-research</span><br>
+              <span class="prompt-char">$</span> /gsd:plan-phase <span class="arg">3</span> <span class="flag">--prd</span> <span class="arg">acceptance-criteria.md</span><br>
+              <span class="prompt-char">$</span> /gsd:plan-phase <span class="arg">4</span> <span class="flag">--gaps</span>
+              <button class="copy-btn" onclick="copyText('/gsd:plan-phase 1', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Flags</div>
+            <div class="cmd-flags">
+              <div class="cmd-flag"><code>--auto</code> <span>Non-interactive mode</span></div>
+              <div class="cmd-flag"><code>--research</code> <span>Force re-research even if RESEARCH.md exists</span></div>
+              <div class="cmd-flag"><code>--skip-research</code> <span>Skip research, go straight to planning</span></div>
+              <div class="cmd-flag"><code>--gaps</code> <span>Gap closure mode (reads VERIFICATION.md)</span></div>
+              <div class="cmd-flag"><code>--skip-verify</code> <span>Skip plan verification loop</span></div>
+              <div class="cmd-flag"><code>--prd &lt;file&gt;</code> <span>Use a PRD file instead of discuss-phase</span></div>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Flow</div>
+            <div class="cmd-output">Research (if needed) &rarr; Plan &rarr; Verify &rarr; Done</div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">core</span><span class="cmd-tag">agent</span><span class="cmd-tag">plan</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="list-phase-assumptions" data-search="list-phase-assumptions assumptions surface approach technical">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:list-phase-assumptions</span>
+          <span class="cmd-desc">Surface Claude's assumptions about a phase before planning</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:list-phase-assumptions <span class="arg">3</span>
+              <button class="copy-btn" onclick="copyText('/gsd:list-phase-assumptions 3', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Details</div>
+            <div class="cmd-output">Reveals hidden assumptions about technical approach, implementation order, scope, risks, and dependencies. Enables early course correction.</div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">transparency</span><span class="cmd-tag">pre-planning</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="map-codebase" data-search="map-codebase analyze codebase architecture stack conventions parallel mapper">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:map-codebase</span>
+          <span class="cmd-desc">Analyze codebase with parallel mapper agents</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:map-codebase<br>
+              <span class="prompt-char">$</span> /gsd:map-codebase <span class="arg">auth</span>
+              <button class="copy-btn" onclick="copyText('/gsd:map-codebase', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Output</div>
+            <div class="cmd-output">7 documents in <code>.planning/codebase/</code>: STACK, INTEGRATIONS, ARCHITECTURE, STRUCTURE, CONVENTIONS, TESTING, CONCERNS</div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">parallel</span><span class="cmd-tag">brownfield</span><span class="cmd-tag">agent</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- EXECUTION -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section class="category-section cat-execution" id="cat-execution">
+      <div class="category-header">
+        <div class="category-icon">&#9889;</div>
+        <h2>Execution</h2>
+        <span class="cmd-count">3 commands</span>
+      </div>
+
+      <div class="cmd-card" id="execute-phase" data-search="execute-phase execute wave parallel gaps-only subagent">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:execute-phase</span>
+          <span class="cmd-desc">Execute all plans in a phase with wave-based parallelization</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:execute-phase <span class="arg">1</span><br>
+              <span class="prompt-char">$</span> /gsd:execute-phase <span class="arg">2</span> <span class="flag">--gaps-only</span>
+              <button class="copy-btn" onclick="copyText('/gsd:execute-phase 1', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Flags</div>
+            <div class="cmd-flags">
+              <div class="cmd-flag"><code>--gaps-only</code> <span>Execute only gap closure plans from verify-work</span></div>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Details</div>
+            <div class="cmd-output">Discovers plans, analyzes dependencies, groups into waves, spawns <code>gsd-executor</code> subagents in parallel per wave.</div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">core</span><span class="cmd-tag">parallel</span><span class="cmd-tag">agent</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="quick" data-search="quick fast ad-hoc task small full discuss atomic">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:quick</span>
+          <span class="cmd-desc">Execute a quick task with GSD guarantees (atomic commits, state tracking)</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:quick <span class="arg">"Fix bug in auth module"</span><br>
+              <span class="prompt-char">$</span> /gsd:quick <span class="arg">"Add new endpoint"</span> <span class="flag">--discuss --full</span>
+              <button class="copy-btn" onclick="copyText('/gsd:quick', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Flags</div>
+            <div class="cmd-flags">
+              <div class="cmd-flag"><code>--discuss</code> <span>Lightweight discussion to surface assumptions first</span></div>
+              <div class="cmd-flag"><code>--full</code> <span>Enable plan-checking and post-execution verification</span></div>
+            </div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">fast</span><span class="cmd-tag">ad-hoc</span><span class="cmd-tag">atomic</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="loop" data-search="loop repetitive iterate batch safety stall parallel sequential limit">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:loop</span>
+          <span class="cmd-desc">Run a repetitive task across multiple targets with safety bounds</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:loop <span class="arg">"Add types to all .js files"</span><br>
+              <span class="prompt-char">$</span> /gsd:loop <span class="arg">"Update API to v2"</span> <span class="flag">--limit 5</span><br>
+              <span class="prompt-char">$</span> /gsd:loop <span class="arg">"Format markdown"</span> <span class="flag">--parallel --limit 20</span>
+              <button class="copy-btn" onclick="copyText('/gsd:loop', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Flags</div>
+            <div class="cmd-flags">
+              <div class="cmd-flag"><code>--limit N</code> <span>Max iterations (default 10, hard cap 50)</span></div>
+              <div class="cmd-flag"><code>--parallel</code> <span>Execute targets via subagents concurrently</span></div>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Safety</div>
+            <div class="cmd-output">Tests pass between iterations &middot; Stall detection after 2 no-progress cycles &middot; Auto-stop on failure</div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">batch</span><span class="cmd-tag">safety</span><span class="cmd-tag">new</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- VERIFICATION -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section class="category-section cat-verification" id="cat-verification">
+      <div class="category-header">
+        <div class="category-icon">&#10003;</div>
+        <h2>Verification</h2>
+        <span class="cmd-count">5 commands</span>
+      </div>
+
+      <div class="cmd-card" id="verify-work" data-search="verify-work validate UAT testing conversational features acceptance">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:verify-work</span>
+          <span class="cmd-desc">Validate built features through conversational UAT</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:verify-work<br>
+              <span class="prompt-char">$</span> /gsd:verify-work <span class="arg">4</span>
+              <button class="copy-btn" onclick="copyText('/gsd:verify-work', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Details</div>
+            <div class="cmd-output">One test at a time, plain text. Auto-diagnoses issues, plans fixes, and prepares for <code>/gsd:execute-phase --gaps-only</code></div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">core</span><span class="cmd-tag">UAT</span><span class="cmd-tag">interactive</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="quality-gate" data-search="quality-gate build lint test security diff pipeline pre-commit pre-pr quick full">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:quality-gate</span>
+          <span class="cmd-desc">Run technical quality checks (build, lint, test, security)</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:quality-gate <span class="comment"># defaults to pre-commit</span><br>
+              <span class="prompt-char">$</span> /gsd:quality-gate <span class="arg">quick</span><br>
+              <span class="prompt-char">$</span> /gsd:quality-gate <span class="arg">pre-pr</span>
+              <button class="copy-btn" onclick="copyText('/gsd:quality-gate', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Modes</div>
+            <div class="cmd-flags">
+              <div class="cmd-flag"><code>quick</code> <span>Build + test only</span></div>
+              <div class="cmd-flag"><code>full</code> <span>All 6 steps: build, typecheck, lint, test, security, diff</span></div>
+              <div class="cmd-flag"><code>pre-commit</code> <span>Build + lint + test (default)</span></div>
+              <div class="cmd-flag"><code>pre-pr</code> <span>All 6 steps + coverage check</span></div>
+            </div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">CI</span><span class="cmd-tag">quality</span><span class="cmd-tag">new</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="add-tests" data-search="add-tests generate tests TDD unit e2e phase">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:add-tests</span>
+          <span class="cmd-desc">Generate tests for a completed phase based on UAT criteria</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:add-tests <span class="arg">5</span><br>
+              <span class="prompt-char">$</span> /gsd:add-tests <span class="arg">6</span> <span class="arg">focus on edge cases</span>
+              <button class="copy-btn" onclick="copyText('/gsd:add-tests 5', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Details</div>
+            <div class="cmd-output">Classifies files into TDD (unit), E2E (browser), or Skip. Presents test plan for approval, then generates.</div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">testing</span><span class="cmd-tag">generation</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="validate-phase" data-search="validate-phase nyquist audit validation coverage gaps">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:validate-phase</span>
+          <span class="cmd-desc">Retroactively audit Nyquist validation gaps for a completed phase</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:validate-phase <span class="arg">3</span>
+              <button class="copy-btn" onclick="copyText('/gsd:validate-phase 3', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Details</div>
+            <div class="cmd-output">Audits Nyquist validation coverage. Updates <code>VALIDATION.md</code> and generates missing test files.</div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">nyquist</span><span class="cmd-tag">coverage</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="security-scan" data-search="security-scan vulnerability secrets injection XSS eval config prompt code full">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:security-scan</span>
+          <span class="cmd-desc">Scan codebase and GSD configuration for security issues</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:security-scan <span class="comment"># defaults to full</span><br>
+              <span class="prompt-char">$</span> /gsd:security-scan <span class="arg">code</span><br>
+              <span class="prompt-char">$</span> /gsd:security-scan <span class="arg">config</span>
+              <button class="copy-btn" onclick="copyText('/gsd:security-scan', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Modes</div>
+            <div class="cmd-flags">
+              <div class="cmd-flag"><code>code</code> <span>Scan app source: secrets, SQL injection, XSS, eval, path traversal</span></div>
+              <div class="cmd-flag"><code>config</code> <span>Scan GSD files: prompt injection, unsafe permissions, exposed creds</span></div>
+              <div class="cmd-flag"><code>full</code> <span>Both code and config scanning (default)</span></div>
+            </div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">security</span><span class="cmd-tag">OWASP</span><span class="cmd-tag">new</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- MANAGEMENT -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section class="category-section cat-management" id="cat-management">
+      <div class="category-header">
+        <div class="category-icon">&#9881;</div>
+        <h2>Management</h2>
+        <span class="cmd-count">8 commands</span>
+      </div>
+
+      <div class="cmd-card" id="add-phase" data-search="add-phase append roadmap end milestone">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:add-phase</span>
+          <span class="cmd-desc">Add phase to end of current milestone in roadmap</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:add-phase <span class="arg">"Add payment processing"</span>
+              <button class="copy-btn" onclick="copyText('/gsd:add-phase', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">roadmap</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="insert-phase" data-search="insert-phase decimal urgent between hotfix">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:insert-phase</span>
+          <span class="cmd-desc">Insert urgent work as decimal phase (e.g., 72.1) between existing phases</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:insert-phase <span class="arg">5</span> <span class="arg">"Fix critical auth bug"</span>
+              <button class="copy-btn" onclick="copyText('/gsd:insert-phase 5', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Details</div>
+            <div class="cmd-output">Uses decimal numbering (5.1, 5.2) to preserve sequence without renumbering.</div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">urgent</span><span class="cmd-tag">hotfix</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="remove-phase" data-search="remove-phase delete renumber clean">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:remove-phase</span>
+          <span class="cmd-desc">Remove a future phase and renumber subsequent phases</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:remove-phase <span class="arg">7</span>
+              <button class="copy-btn" onclick="copyText('/gsd:remove-phase 7', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">cleanup</span><span class="cmd-tag">renumber</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="complete-milestone" data-search="complete-milestone archive tag version ship release">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:complete-milestone</span>
+          <span class="cmd-desc">Archive completed milestone and prepare for next version</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:complete-milestone <span class="arg">1.0</span>
+              <button class="copy-btn" onclick="copyText('/gsd:complete-milestone 1.0', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Details</div>
+            <div class="cmd-output">Archives to <code>.planning/milestones/</code>, creates git tag, updates PROJECT.md. Pre-flight checks for audit status.</div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">release</span><span class="cmd-tag">archive</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="audit-milestone" data-search="audit-milestone verify coverage requirements integration definition-of-done">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:audit-milestone</span>
+          <span class="cmd-desc">Audit milestone completion against original intent</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:audit-milestone<br>
+              <span class="prompt-char">$</span> /gsd:audit-milestone <span class="arg">1.1</span>
+              <button class="copy-btn" onclick="copyText('/gsd:audit-milestone', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Output</div>
+            <div class="cmd-output">Status: <code>passed</code> or <code>gaps_found</code> &rarr; use <code>/gsd:plan-milestone-gaps</code> to close gaps</div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">audit</span><span class="cmd-tag">integration</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="plan-milestone-gaps" data-search="plan-milestone-gaps close gaps audit fix phases create">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:plan-milestone-gaps</span>
+          <span class="cmd-desc">Create phases to close all gaps identified by milestone audit</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:plan-milestone-gaps
+              <button class="copy-btn" onclick="copyText('/gsd:plan-milestone-gaps', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Details</div>
+            <div class="cmd-output">Reads MILESTONE-AUDIT.md, groups gaps into logical phases, creates entries in ROADMAP.md automatically.</div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">gap-closure</span><span class="cmd-tag">auto</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="cleanup" data-search="cleanup archive directories old phases milestones tidy">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:cleanup</span>
+          <span class="cmd-desc">Archive accumulated phase directories from completed milestones</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:cleanup
+              <button class="copy-btn" onclick="copyText('/gsd:cleanup', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">housekeeping</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="checkpoint" data-search="checkpoint progress save verify snapshot rollback state create list">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:checkpoint</span>
+          <span class="cmd-desc">Create or verify named progress checkpoints within a phase</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:checkpoint <span class="comment"># list all</span><br>
+              <span class="prompt-char">$</span> /gsd:checkpoint <span class="arg">core-done</span> <span class="comment"># create</span><br>
+              <span class="prompt-char">$</span> /gsd:checkpoint <span class="arg">verify</span> <span class="arg">tests-pass</span>
+              <button class="copy-btn" onclick="copyText('/gsd:checkpoint', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Typical Flow</div>
+            <div class="cmd-output">feature-start &rarr; core-done &rarr; tests-pass &rarr; refactored &rarr; pr-ready</div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">snapshot</span><span class="cmd-tag">rollback</span><span class="cmd-tag">new</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- SESSION -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section class="category-section cat-session" id="cat-session">
+      <div class="category-header">
+        <div class="category-icon">&#8634;</div>
+        <h2>Session</h2>
+        <span class="cmd-count">6 commands</span>
+      </div>
+
+      <div class="cmd-card" id="pause-work" data-search="pause-work save handoff continue-here session wip stop">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:pause-work</span>
+          <span class="cmd-desc">Create context handoff when pausing work mid-phase</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:pause-work
+              <button class="copy-btn" onclick="copyText('/gsd:pause-work', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Details</div>
+            <div class="cmd-output">Creates <code>.continue-here.md</code> with: position, completed work, remaining tasks, key decisions, what did NOT work, cost estimate. Commits as WIP.</div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">persistence</span><span class="cmd-tag">handoff</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="resume-work" data-search="resume-work restore context continue session pickup">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:resume-work</span>
+          <span class="cmd-desc">Resume work from previous session with full context restoration</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:resume-work
+              <button class="copy-btn" onclick="copyText('/gsd:resume-work', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Details</div>
+            <div class="cmd-output">Reads dead ends FIRST to avoid retrying failed approaches. Restores decisions, context, and routes to next action.</div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">persistence</span><span class="cmd-tag">restore</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="progress" data-search="progress status overview routing next action summary">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:progress</span>
+          <span class="cmd-desc">Check project progress, show context, route to next action</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:progress
+              <button class="copy-btn" onclick="copyText('/gsd:progress', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Details</div>
+            <div class="cmd-output">Provides situational awareness. Intelligently routes to execute, plan, or verify based on current project state.</div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">overview</span><span class="cmd-tag">routing</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="context" data-search="context mode dev research review switch behavior">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:context</span>
+          <span class="cmd-desc">Switch GSD context mode (dev / research / review)</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:context <span class="arg">dev</span> <span class="comment"># code first, explain after</span><br>
+              <span class="prompt-char">$</span> /gsd:context <span class="arg">research</span> <span class="comment"># read widely before concluding</span><br>
+              <span class="prompt-char">$</span> /gsd:context <span class="arg">review</span> <span class="comment"># quality over speed</span>
+              <button class="copy-btn" onclick="copyText('/gsd:context dev', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">mode</span><span class="cmd-tag">behavior</span><span class="cmd-tag">new</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="remember" data-search="remember memory persist weighted cross-session save recall">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:remember</span>
+          <span class="cmd-desc">Save weighted memories from current session to persistent MEMORY.md</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:remember<br>
+              <span class="prompt-char">$</span> /gsd:remember <span class="arg">"Always use bun for this project"</span>
+              <button class="copy-btn" onclick="copyText('/gsd:remember', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Weight System</div>
+            <div class="cmd-flags">
+              <div class="cmd-flag"><code>W5</code> <span>CRITICAL &mdash; Architecture decisions, "never do X"</span></div>
+              <div class="cmd-flag"><code>W4</code> <span>IMPORTANT &mdash; Confirmed patterns, breakthroughs</span></div>
+              <div class="cmd-flag"><code>W3</code> <span>USEFUL &mdash; Working solutions, config that worked</span></div>
+              <div class="cmd-flag"><code>W2</code> <span>CONTEXT &mdash; Project state, environment quirks</span></div>
+              <div class="cmd-flag"><code>W1</code> <span>OBSERVED &mdash; Single-session, unconfirmed</span></div>
+            </div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">memory</span><span class="cmd-tag">persistence</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="learn" data-search="learn extract patterns learnings session error resolution debugging architecture">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:learn</span>
+          <span class="cmd-desc">Extract reusable patterns and learnings from current session</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:learn<br>
+              <span class="prompt-char">$</span> /gsd:learn <span class="arg">database migrations</span>
+              <button class="copy-btn" onclick="copyText('/gsd:learn', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Categories</div>
+            <div class="cmd-output">Error Resolution &middot; Debugging &middot; Architecture &middot; Tool/Library &middot; Workflow &middot; Performance &middot; Security &middot; Testing</div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Output</div>
+            <div class="cmd-output">Saves to <code>.planning/LEARNINGS.md</code> with deduplication. Informs future planning.</div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">continuous-learning</span><span class="cmd-tag">new</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- ADVANCED -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section class="category-section cat-advanced" id="cat-advanced">
+      <div class="category-header">
+        <div class="category-icon">&#9830;</div>
+        <h2>Advanced</h2>
+        <span class="cmd-count">4 commands</span>
+      </div>
+
+      <div class="cmd-card" id="orchestrate" data-search="orchestrate chain agents handoff feature bugfix refactor security custom multi-agent pipeline">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:orchestrate</span>
+          <span class="cmd-desc">Chain multiple GSD agents in sequence with structured handoffs</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:orchestrate <span class="arg">feature</span><br>
+              <span class="prompt-char">$</span> /gsd:orchestrate <span class="arg">bugfix</span><br>
+              <span class="prompt-char">$</span> /gsd:orchestrate <span class="arg">custom</span> <span class="arg">researcher,planner,executor</span>
+              <button class="copy-btn" onclick="copyText('/gsd:orchestrate feature', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Predefined Chains</div>
+            <div class="cmd-flags">
+              <div class="cmd-flag"><code>feature</code> <span>researcher &rarr; planner &rarr; plan-checker &rarr; executor &rarr; verifier</span></div>
+              <div class="cmd-flag"><code>bugfix</code> <span>debugger &rarr; planner &rarr; executor &rarr; verifier</span></div>
+              <div class="cmd-flag"><code>refactor</code> <span>codebase-mapper &rarr; planner &rarr; executor &rarr; integration-checker</span></div>
+              <div class="cmd-flag"><code>security</code> <span>codebase-mapper &rarr; verifier (security focus)</span></div>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Output</div>
+            <div class="cmd-output">Final recommendation: <code>SHIP</code> / <code>NEEDS WORK</code> / <code>BLOCKED</code></div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">multi-agent</span><span class="cmd-tag">pipeline</span><span class="cmd-tag">new</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="debug" data-search="debug systematic scientific method issue bug investigate subagent checkpoint">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:debug</span>
+          <span class="cmd-desc">Systematic debugging with persistent state across context resets</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:debug<br>
+              <span class="prompt-char">$</span> /gsd:debug <span class="arg">"Build fails on Windows with path errors"</span>
+              <button class="copy-btn" onclick="copyText('/gsd:debug', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Details</div>
+            <div class="cmd-output">Uses scientific method with <code>gsd-debugger</code> agent. Supports checkpoint-based session persistence for complex investigations.</div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">debugging</span><span class="cmd-tag">agent</span><span class="cmd-tag">persistent</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="set-profile" data-search="set-profile model quality balanced budget cost token">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:set-profile</span>
+          <span class="cmd-desc">Switch model profile for GSD agents (quality/balanced/budget)</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:set-profile <span class="arg">quality</span><br>
+              <span class="prompt-char">$</span> /gsd:set-profile <span class="arg">balanced</span><br>
+              <span class="prompt-char">$</span> /gsd:set-profile <span class="arg">budget</span>
+              <button class="copy-btn" onclick="copyText('/gsd:set-profile balanced', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">cost</span><span class="cmd-tag">model</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="settings" data-search="settings configure toggle interactive preferences workflow agents enabled">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:settings</span>
+          <span class="cmd-desc">Configure GSD workflow toggles and model profile</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:settings
+              <button class="copy-btn" onclick="copyText('/gsd:settings', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-section">
+            <div class="cmd-section-title">Configures</div>
+            <div class="cmd-output">Model profile &middot; Research agent &middot; Plan-checker &middot; Verifier &middot; Branching strategy</div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">config</span><span class="cmd-tag">interactive</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- UTILITIES -->
+    <!-- ═══════════════════════════════════════════ -->
+    <section class="category-section cat-utilities" id="cat-utilities">
+      <div class="category-header">
+        <div class="category-icon">&#9662;</div>
+        <h2>Utilities</h2>
+        <span class="cmd-count">6 commands</span>
+      </div>
+
+      <div class="cmd-card" id="help" data-search="help reference commands list guide">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:help</span>
+          <span class="cmd-desc">Show available GSD commands and usage guide</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage"><span class="prompt-char">$</span> /gsd:help<button class="copy-btn" onclick="copyText('/gsd:help', this)">copy</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="health" data-search="health diagnose planning directory repair integrity validate">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:health</span>
+          <span class="cmd-desc">Diagnose planning directory health and optionally repair issues</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:health<br>
+              <span class="prompt-char">$</span> /gsd:health <span class="flag">--repair</span>
+              <button class="copy-btn" onclick="copyText('/gsd:health', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">diagnostic</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="check-todos" data-search="check-todos list pending select work area filter todo">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:check-todos</span>
+          <span class="cmd-desc">List pending todos and select one to work on</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:check-todos<br>
+              <span class="prompt-char">$</span> /gsd:check-todos <span class="arg">auth</span>
+              <button class="copy-btn" onclick="copyText('/gsd:check-todos', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">todos</span><span class="cmd-tag">interactive</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="add-todo" data-search="add-todo capture idea task issue backlog">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:add-todo</span>
+          <span class="cmd-desc">Capture idea or task as todo from current conversation</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage">
+              <span class="prompt-char">$</span> /gsd:add-todo <span class="arg">"Refactor auth module"</span>
+              <button class="copy-btn" onclick="copyText('/gsd:add-todo', this)">copy</button>
+            </div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">capture</span><span class="cmd-tag">backlog</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="update" data-search="update upgrade version latest changelog npm install">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:update</span>
+          <span class="cmd-desc">Update GSD to latest version with changelog display</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage"><span class="prompt-char">$</span> /gsd:update<button class="copy-btn" onclick="copyText('/gsd:update', this)">copy</button></div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">upgrade</span></div>
+        </div>
+      </div>
+
+      <div class="cmd-card" id="join-discord" data-search="join-discord community server invite chat support">
+        <div class="cmd-card-header" onclick="toggleCard(this)">
+          <span class="cmd-name">/gsd:join-discord</span>
+          <span class="cmd-desc">Join the GSD Discord community</span>
+          <span class="cmd-expand-icon">&#9656;</span>
+        </div>
+        <div class="cmd-card-body">
+          <div class="cmd-section">
+            <div class="cmd-section-title">Usage</div>
+            <div class="cmd-usage"><span class="prompt-char">$</span> /gsd:join-discord<button class="copy-btn" onclick="copyText('/gsd:join-discord', this)">copy</button></div>
+          </div>
+          <div class="cmd-tags"><span class="cmd-tag">community</span></div>
+        </div>
+      </div>
+    </section>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- Keyboard hint -->
+<div class="kbd-hint">
+  <kbd>/</kbd> Search &nbsp;&middot;&nbsp; <kbd>Esc</kbd> Clear
+</div>
+
+<script>
+// ═══ Card toggle ═══
+function toggleCard(header) {
+  const card = header.parentElement;
+  const wasExpanded = card.classList.contains('expanded');
+
+  // Close all cards
+  document.querySelectorAll('.cmd-card.expanded').forEach(c => c.classList.remove('expanded'));
+
+  // Toggle clicked card
+  if (!wasExpanded) {
+    card.classList.add('expanded');
+    // Update active nav
+    updateActiveNav(card.id);
+    // Smooth scroll if below fold
+    setTimeout(() => {
+      const rect = card.getBoundingClientRect();
+      if (rect.top < 0 || rect.bottom > window.innerHeight) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 50);
+  } else {
+    updateActiveNav(null);
+  }
+}
+
+// ═══ Nav click ═══
+document.querySelectorAll('.nav-link').forEach(link => {
+  link.addEventListener('click', () => {
+    const target = link.dataset.target;
+    const card = document.getElementById(target);
+    if (card) {
+      // Expand the card
+      document.querySelectorAll('.cmd-card.expanded').forEach(c => c.classList.remove('expanded'));
+      card.classList.add('expanded');
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      updateActiveNav(target);
+      // Close mobile sidebar
+      document.getElementById('sidebar').classList.remove('open');
+    }
+  });
+});
+
+function updateActiveNav(targetId) {
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  if (targetId) {
+    const active = document.querySelector(`.nav-link[data-target="${targetId}"]`);
+    if (active) active.classList.add('active');
+  }
+}
+
+// ═══ Search ═══
+const searchInput = document.getElementById('searchInput');
+const noResults = document.getElementById('noResults');
+
+searchInput.addEventListener('input', () => {
+  const query = searchInput.value.toLowerCase().trim();
+  const cards = document.querySelectorAll('.cmd-card');
+  const sections = document.querySelectorAll('.category-section');
+  let totalVisible = 0;
+
+  cards.forEach(card => {
+    const searchData = card.dataset.search || '';
+    const name = card.querySelector('.cmd-name')?.textContent || '';
+    const desc = card.querySelector('.cmd-desc')?.textContent || '';
+    const haystack = `${searchData} ${name} ${desc}`.toLowerCase();
+
+    if (!query || haystack.includes(query)) {
+      card.style.display = '';
+      totalVisible++;
+    } else {
+      card.style.display = 'none';
+      card.classList.remove('expanded');
+    }
+  });
+
+  // Hide empty category sections
+  sections.forEach(section => {
+    const visibleCards = section.querySelectorAll('.cmd-card:not([style*="display: none"])');
+    section.style.display = visibleCards.length === 0 ? 'none' : '';
+  });
+
+  noResults.style.display = totalVisible === 0 && query ? 'block' : 'none';
+});
+
+// ═══ Keyboard shortcuts ═══
+document.addEventListener('keydown', (e) => {
+  if (e.key === '/' && document.activeElement !== searchInput) {
+    e.preventDefault();
+    searchInput.focus();
+  }
+  if (e.key === 'Escape') {
+    searchInput.value = '';
+    searchInput.dispatchEvent(new Event('input'));
+    searchInput.blur();
+  }
+});
+
+// ═══ Copy to clipboard ═══
+function copyText(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = 'copy';
+      btn.classList.remove('copied');
+    }, 1500);
+  });
+}
+
+// ═══ Mobile sidebar ═══
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+// Close sidebar on outside click (mobile)
+document.addEventListener('click', (e) => {
+  const sidebar = document.getElementById('sidebar');
+  const toggle = document.querySelector('.menu-toggle');
+  if (window.innerWidth <= 840 && sidebar.classList.contains('open') &&
+      !sidebar.contains(e.target) && !toggle.contains(e.target)) {
+    sidebar.classList.remove('open');
+  }
+});
+</script>
+</body>
+</html>

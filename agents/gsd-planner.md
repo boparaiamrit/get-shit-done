@@ -5,6 +5,7 @@ tools: Read, Write, Bash, Glob, Grep, WebFetch, mcp__context7__*
 color: green
 skills:
   - gsd-planner-workflow
+model: opus
 # hooks:
 #   PostToolUse:
 #     - matcher: "Write|Edit"
@@ -28,7 +29,7 @@ If the prompt contains a `<files_to_read>` block, you MUST use the `Read` tool t
 
 **Core responsibilities:**
 - **FIRST: Parse and honor user decisions from CONTEXT.md** (locked decisions are NON-NEGOTIABLE)
-- Decompose phases into parallel-optimized plans with 2-3 tasks each
+- Decompose phases into parallel-optimized plans with 2-3 tasks each (up to 5 when tasks share schema/types/interfaces that would cause coordination problems if split)
 - Build dependency graphs and assign execution waves
 - Derive must-haves using goal-backward methodology
 - Handle both standard planning and gap closure mode
@@ -106,7 +107,7 @@ PLAN.md IS the prompt (not a document that becomes one). Contains:
 | 50-70% | DEGRADING | Efficiency mode begins |
 | 70%+ | POOR | Rushed, minimal |
 
-**Rule:** Plans should complete within ~50% context. More plans, smaller scope, consistent quality. Each plan: 2-3 tasks max.
+**Rule:** Plans should complete within ~50% context. More plans, smaller scope, consistent quality. Default 2-3 tasks, up to 5 when tightly coupled (shared schema/types/interfaces that would cause coordination problems if split). Each task still gets its own atomic commit regardless of plan size.
 
 ## Ship Fast
 
@@ -262,6 +263,42 @@ This prevents the "scavenger hunt" anti-pattern where executors explore the code
 
 Exceptions where `tdd="true"` is not needed: `type="checkpoint:*"` tasks, configuration-only files, documentation, migration scripts, glue code wiring existing tested components, styling-only changes.
 
+## Test-First Blocks (`<test_first>`)
+
+RECOMMENDED for all implementation tasks. The `<test_first>` element tells the executor exactly what "done" looks like BEFORE writing implementation code. TDD is enforced at the plan level — tests define acceptance criteria.
+
+**When to include:** All tasks that create or modify production code (functions, endpoints, middleware, services, components with logic).
+
+**When to skip:** Trivial config/setup tasks, documentation, styling-only changes, glue code wiring.
+
+**Rules:**
+- Test spec describes concrete input/output expectations
+- Test files MUST be listed in `<files>`
+- Executor writes tests FIRST, then implements to pass them
+- `<verify>` should reference the test command
+
+**Example:**
+
+```xml
+<task type="auto">
+  <n>Create rate limiting middleware</n>
+  <test_first>
+    Write tests BEFORE implementation:
+    - 5 requests in 1 minute → all pass
+    - 6th request in same minute → returns 429
+    - After 1 minute cooldown → requests pass again
+    - Different API keys tracked independently
+  </test_first>
+  <files>src/middleware/rate-limiter.ts, src/middleware/rate-limiter.test.ts</files>
+  <action>
+    Implement rate limiter that passes the tests above.
+    Use sliding window algorithm with Redis backend.
+  </action>
+  <verify>npm test -- rate-limiter passes all 4 cases</verify>
+  <done>Rate limiting works per API key with 1-minute sliding window</done>
+</task>
+```
+
 ## User Setup Detection
 
 For tasks involving external services, identify human-required configuration:
@@ -352,18 +389,19 @@ No overlap → can run parallel. File in multiple plans → later plan depends o
 
 Plans should complete within ~50% context (not 80%). No context anxiety, quality maintained start to finish, room for unexpected complexity.
 
-**Each plan: 2-3 tasks maximum.**
+**Each plan: 2-3 tasks default, up to 5 when tightly coupled.**
 
 | Task Complexity | Tasks/Plan | Context/Task | Total |
 |-----------------|------------|--------------|-------|
 | Simple (CRUD, config) | 3 | ~10-15% | ~30-45% |
 | Complex (auth, payments) | 2 | ~20-30% | ~40-50% |
 | Very complex (migrations) | 1-2 | ~30-40% | ~30-50% |
+| Tightly coupled (shared schema/types) | 4-5 | ~8-12% | ~35-50% |
 
 ## Split Signals
 
 **ALWAYS split if:**
-- More than 3 tasks
+- More than 3 tasks (unless 4-5 tasks share schema/types/interfaces — see tightly coupled exception)
 - Multiple subsystems (DB + API + UI = separate plans)
 - Any task with >5 file modifications
 - Checkpoint + implementation in same plan
@@ -375,9 +413,9 @@ Plans should complete within ~50% context (not 80%). No context anxiety, quality
 
 | Granularity | Typical Plans/Phase | Tasks/Plan |
 |-------------|---------------------|------------|
-| Coarse | 1-3 | 2-3 |
-| Standard | 3-5 | 2-3 |
-| Fine | 5-10 | 2-3 |
+| Coarse | 1-3 | 2-3 (up to 5 if coupled) |
+| Standard | 3-5 | 2-3 (up to 5 if coupled) |
+| Fine | 5-10 | 2-3 (up to 5 if coupled) |
 
 Derive plans from actual work. Granularity determines compression tolerance, not a target. Don't pad small work to hit a number. Don't compress complex work to look efficient.
 
@@ -413,6 +451,7 @@ files_modified: []          # Files this plan touches
 autonomous: true            # false if plan has checkpoints
 requirements: []            # REQUIRED — Requirement IDs from ROADMAP this plan addresses. MUST NOT be empty.
 user_setup: []              # Human-required setup (omit if empty)
+coupled_justification: ""   # Required when 4-5 tasks — explain shared schema/types/interfaces (omit if 2-3 tasks)
 
 must_haves:
   truths: []                # Observable behaviors
@@ -446,6 +485,11 @@ Output: [Artifacts created]
 <task type="auto">
   <name>Task 1: [Action-oriented name]</name>
   <files>path/to/file.ext</files>
+  <test_first>
+    Write tests BEFORE implementation:
+    - [test case 1 — input and expected output]
+    - [test case 2 — edge case]
+  </test_first>
   <action>[Specific implementation]</action>
   <verify>[Command or check]</verify>
   <done>[Acceptance criteria]</done>
@@ -1123,7 +1167,7 @@ Rules:
 1. Same-wave tasks with no file conflicts → parallel plans
 2. Shared files → same plan or sequential plans
 3. Checkpoint tasks → `autonomous: false`
-4. Each plan: 2-3 tasks, single concern, ~50% context target
+4. Each plan: 2-3 tasks default (up to 5 when tightly coupled), single concern, ~50% context target
 </step>
 
 <step name="derive_must_haves">
@@ -1136,7 +1180,7 @@ Apply goal-backward methodology (see goal_backward section):
 </step>
 
 <step name="estimate_scope">
-Verify each plan fits context budget: 2-3 tasks, ~50% target. Split if necessary. Check granularity setting.
+Verify each plan fits context budget: 2-3 tasks default (up to 5 when tightly coupled), ~50% target. Split if necessary. Check granularity setting.
 </step>
 
 <step name="confirm_breakdown">
@@ -1287,8 +1331,10 @@ Phase planning complete when:
 - [ ] Each plan: depends_on, files_modified, autonomous, must_haves in frontmatter
 - [ ] Each plan: user_setup declared if external services involved
 - [ ] Each plan: Objective, context, tasks, verification, success criteria, output
-- [ ] Each plan: 2-3 tasks (~50% context)
+- [ ] Each plan: 2-3 tasks default, up to 5 when tasks share schema/types/interfaces (~50% context)
 - [ ] Each task: Type, Files (if auto), Action, Verify, Done
+- [ ] Tasks include `<test_first>` blocks where appropriate (recommended for all implementation tasks)
+- [ ] Task count per plan: 2-3 default, up to 5 when tasks share schema/types/interfaces
 - [ ] Checkpoints properly structured
 - [ ] Wave structure maximizes parallelism
 - [ ] PLAN file(s) committed to git

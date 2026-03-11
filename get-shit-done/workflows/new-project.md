@@ -1,5 +1,5 @@
 <purpose>
-Initialize a new project through unified flow: questioning, research (optional), requirements, roadmap. This is the most leveraged moment in any project — deep questioning here means better plans, better execution, better outcomes. One workflow takes you from idea to ready-for-planning.
+Initialize a new project through unified flow: proposal-first discovery, research (optional), requirements, roadmap. Instead of interrogating the user with sequential questions, this workflow makes smart recommendations and lets the user override. One workflow takes you from idea to ready-for-planning with minimal friction.
 </purpose>
 
 <required_reading>
@@ -201,7 +201,7 @@ node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" config-set workflow._auto_c
 
 Proceed to Step 4 (skip Steps 3 and 5).
 
-## 3. Deep Questioning
+## 3. Project Proposal
 
 **If auto mode:** Skip (already handled in Step 2a). Extract project context from provided document instead and proceed to Step 4.
 
@@ -219,43 +219,65 @@ Ask inline (freeform, NOT AskUserQuestion):
 
 "What do you want to build?"
 
-Wait for their response. This gives you the context needed to ask intelligent follow-up questions.
+Wait for their response. This gives you the context needed to generate a smart proposal.
 
-**Follow the thread:**
+**Gather additional context (background, not out loud):**
 
-Based on what they said, ask follow-up questions that dig into their response. Use AskUserQuestion with options that probe what they mentioned — interpretations, clarifications, concrete examples.
+After their response, silently read any available context:
+- README.md, package.json, or other project files (if brownfield)
+- Codebase map (if exists)
+- Any files they referenced
 
-Keep following threads. Each answer opens new threads to explore. Ask about:
-- What excited them
-- What problem sparked this
-- What they mean by vague terms
-- What it would actually look like
-- What's already decided
-
-Consult `questioning.md` for techniques:
+Consult `questioning.md` for synthesis techniques:
 - Challenge vagueness
 - Make abstract concrete
 - Surface assumptions
 - Find edges
 - Reveal motivation
 
-**Check context (background, not out loud):**
+**Generate Project Proposal:**
 
-As you go, mentally check the context checklist from `questioning.md`. If gaps remain, weave questions naturally. Don't suddenly switch to checklist mode.
+Using their response and any gathered context, generate an inline Project Proposal:
 
-**Decision gate:**
+```
+# Project Proposal
 
-When you could write a clear PROJECT.md, use AskUserQuestion:
+## What I Understand
+[Synthesize from their response + any context clues from existing files.
+Restate the core idea, target users, and key problem being solved.]
 
-- header: "Ready?"
-- question: "I think I understand what you're after. Ready to create PROJECT.md?"
+## Recommended Approach
+
+### Decisions Made (auto-decided)
+- [Decision]: [One-line reason]
+- [Decision]: [One-line reason]
+
+### Recommendations (override if you disagree)
+- [Topic]: Going with [X] because [reason]. Alt: [Y] if [condition].
+- [Topic]: Going with [X] because [reason]. Alt: [Y] if [condition].
+
+### Input Needed (max 5 questions)
+- [Question]: My recommendation: [X] because [reason]. But this depends on [thing only you know].
+- [Question]: My recommendation: [X] because [reason]. But this depends on [thing only you know].
+```
+
+**Question budget:** Max 5 must-ask items in "Input Needed". Everything else should be auto-decided or presented as an overridable recommendation. Do not ask questions you can reasonably answer yourself.
+
+**Present proposal via AskUserQuestion:**
+
+- header: "Proposal"
+- question: "Review this project proposal."
 - options:
-  - "Create PROJECT.md" — Let's move forward
-  - "Keep exploring" — I want to share more / ask me more
+  - "Approve and create PROJECT.md" — Looks good, proceed
+  - "Override specific items" — I want to change some decisions or answer questions differently
 
-If "Keep exploring" — ask what they want to add, or identify gaps and probe naturally.
+**If "Override specific items":**
+- Ask which items they want to override (freeform)
+- Incorporate their feedback into the proposal
+- Re-present the updated proposal via AskUserQuestion with the same options
+- Loop until "Approve and create PROJECT.md" selected
 
-Loop until "Create PROJECT.md" selected.
+**If "Approve and create PROJECT.md":** Proceed to Step 4.
 
 ## 4. Write PROJECT.md
 
@@ -343,7 +365,7 @@ mkdir -p .planning
 node "$HOME/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs: initialize project" --files .planning/PROJECT.md
 ```
 
-## 5. Workflow Preferences
+## 5. Workflow Preferences — Proposal
 
 **If auto mode:** Skip — config was collected in Step 2a. Proceed to Step 5.5.
 
@@ -365,105 +387,59 @@ AskUserQuestion([
 
 If "Yes": read `~/.gsd/defaults.json`, use those values for config.json, and skip directly to **Commit config.json** below.
 
-If "No" or `~/.gsd/defaults.json` doesn't exist: proceed with the questions below.
+If "No" or `~/.gsd/defaults.json` doesn't exist: proceed with the proposal below.
 
-**Round 1 — Core workflow settings (4 questions):**
+**Generate workflow configuration proposal:**
 
-```
-questions: [
-  {
-    header: "Mode",
-    question: "How do you want to work?",
-    multiSelect: false,
-    options: [
-      { label: "YOLO (Recommended)", description: "Auto-approve, just execute" },
-      { label: "Interactive", description: "Confirm at each step" }
-    ]
-  },
-  {
-    header: "Granularity",
-    question: "How finely should scope be sliced into phases?",
-    multiSelect: false,
-    options: [
-      { label: "Coarse", description: "Fewer, broader phases (3-5 phases, 1-3 plans each)" },
-      { label: "Standard", description: "Balanced phase size (5-8 phases, 3-5 plans each)" },
-      { label: "Fine", description: "Many focused phases (8-12 phases, 5-10 plans each)" }
-    ]
-  },
-  {
-    header: "Execution",
-    question: "Run plans in parallel?",
-    multiSelect: false,
-    options: [
-      { label: "Parallel (Recommended)", description: "Independent plans run simultaneously" },
-      { label: "Sequential", description: "One plan at a time" }
-    ]
-  },
-  {
-    header: "Git Tracking",
-    question: "Commit planning docs to git?",
-    multiSelect: false,
-    options: [
-      { label: "Yes (Recommended)", description: "Planning docs tracked in version control" },
-      { label: "No", description: "Keep .planning/ local-only (add to .gitignore)" }
-    ]
-  }
-]
-```
-
-**Round 2 — Workflow agents:**
-
-These spawn additional agents during planning/execution. They add tokens and time but improve quality.
-
-| Agent | When it runs | What it does |
-|-------|--------------|--------------|
-| **Researcher** | Before planning each phase | Investigates domain, finds patterns, surfaces gotchas |
-| **Plan Checker** | After plan is created | Verifies plan actually achieves the phase goal |
-| **Verifier** | After phase execution | Confirms must-haves were delivered |
-
-All recommended for important projects. Skip for quick experiments.
+Based on the project context from PROJECT.md, generate a recommended configuration as an inline table:
 
 ```
-questions: [
-  {
-    header: "Research",
-    question: "Research before planning each phase? (adds tokens/time)",
-    multiSelect: false,
-    options: [
-      { label: "Yes (Recommended)", description: "Investigate domain, find patterns, surface gotchas" },
-      { label: "No", description: "Plan directly from requirements" }
-    ]
-  },
-  {
-    header: "Plan Check",
-    question: "Verify plans will achieve their goals? (adds tokens/time)",
-    multiSelect: false,
-    options: [
-      { label: "Yes (Recommended)", description: "Catch gaps before execution starts" },
-      { label: "No", description: "Execute plans without verification" }
-    ]
-  },
-  {
-    header: "Verifier",
-    question: "Verify work satisfies requirements after each phase? (adds tokens/time)",
-    multiSelect: false,
-    options: [
-      { label: "Yes (Recommended)", description: "Confirm deliverables match phase goals" },
-      { label: "No", description: "Trust execution, skip verification" }
-    ]
-  },
-  {
-    header: "AI Models",
-    question: "Which AI models for planning agents?",
-    multiSelect: false,
-    options: [
-      { label: "Balanced (Recommended)", description: "Sonnet for most agents — good quality/cost ratio" },
-      { label: "Quality", description: "Opus for research/roadmap — higher cost, deeper analysis" },
-      { label: "Budget", description: "Haiku where possible — fastest, lowest cost" }
-    ]
-  }
-]
+## Recommended Workflow Configuration
+
+Going with these settings based on your project:
+
+| Setting | Value | Why |
+|---------|-------|-----|
+| Mode | YOLO | [reason based on project context] |
+| Granularity | Coarse | [reason based on project scope/complexity] |
+| Execution | Parallel | [reason based on project structure] |
+| Git Tracking | Yes | [reason] |
+| Research | Yes | [reason based on domain familiarity] |
+| Plan Check | Yes | [reason based on project importance] |
+| Verifier | Yes | [reason based on quality needs] |
+| Model Profile | Balanced | [reason based on cost/quality tradeoff] |
+
+Override any setting you disagree with, or approve to proceed.
 ```
+
+**Present via single AskUserQuestion:**
+
+- header: "Workflow"
+- question: "Review recommended workflow configuration."
+- options:
+  - "Approve all (Recommended)" — Use these settings
+  - "Override settings" — I want to change specific settings
+
+**If "Override settings":**
+- Ask which settings they want to change (freeform)
+- Incorporate changes
+- Re-present the updated table via AskUserQuestion with the same options
+- Loop until "Approve all (Recommended)" selected
+
+**If "Approve all (Recommended)":** Create config with the proposed values.
+
+**Map proposal values to config:**
+
+| Setting | Config key | Mapping |
+|---------|-----------|---------|
+| Mode | `mode` | YOLO → "yolo", Interactive → "interactive" |
+| Granularity | `granularity` | Coarse → "coarse", Standard → "standard", Fine → "fine" |
+| Execution | `parallelization` | Parallel → true, Sequential → false |
+| Git Tracking | `commit_docs` | Yes → true, No → false |
+| Research | `workflow.research` | Yes → true, No → false |
+| Plan Check | `workflow.plan_check` | Yes → true, No → false |
+| Verifier | `workflow.verifier` | Yes → true, No → false |
+| Model Profile | `model_profile` | Balanced → "balanced", Quality → "quality", Budget → "budget" |
 
 Create `.planning/config.json` with all settings:
 
@@ -505,6 +481,10 @@ Use models from init: `researcher_model`, `synthesizer_model`, `roadmapper_model
 ## 6. Research Decision
 
 **If auto mode:** Default to "Research first" without asking.
+
+Present recommendation-first:
+
+"Going with research first because understanding the [domain] ecosystem will surface table-stakes features and standard architecture patterns that prevent costly rework. Override if you already know this domain well."
 
 Use AskUserQuestion:
 - header: "Research"
@@ -740,7 +720,7 @@ Files: `.planning/research/`
 
 **If "Skip research":** Continue to Step 7.
 
-## 7. Define Requirements
+## 7. Define Requirements — Proposal
 
 Display stage banner:
 ```
@@ -762,75 +742,64 @@ Read PROJECT.md and extract:
 - Auto-include all table stakes features (users expect these)
 - Include features explicitly mentioned in provided document
 - Auto-defer differentiators not mentioned in document
-- Skip per-category AskUserQuestion loops
-- Skip "Any additions?" question
-- Skip requirements approval gate
+- Skip requirements proposal and approval
 - Generate REQUIREMENTS.md and commit directly
 
-**Present features by category (interactive mode only):**
+**Generate requirements proposal (interactive mode only):**
+
+Using PROJECT.md context and research findings (if available), generate a requirements proposal inline:
 
 ```
-Here are the features for [domain]:
+## Proposed v1 Requirements
 
-## Authentication
-**Table stakes:**
-- Sign up with email/password
-- Email verification
-- Password reset
-- Session management
+Based on your project and research:
 
-**Differentiators:**
-- Magic link login
-- OAuth (Google, GitHub)
-- 2FA
+### [Category 1]
+**Included (table stakes):**
+- [Feature A] — Users expect this
+- [Feature B] — Users expect this
 
-**Research notes:** [any relevant notes]
+**Included (from your description):**
+- [Feature C] — You mentioned this
 
----
+**Deferred to v2:**
+- [Feature D] — Nice but not essential for launch
 
-## [Next Category]
+### [Category 2]
+**Included (table stakes):**
+- [Feature E] — Users expect this
+
+**Included (from your description):**
+- [Feature F] — You mentioned this
+
+**Deferred to v2:**
+- [Feature G] — Nice but not essential for launch
+
+### [Category N]
 ...
 ```
 
-**If no research:** Gather requirements through conversation instead.
+**If no research:** Still generate a proposal based on PROJECT.md context and domain knowledge. Categorize features as table stakes vs description-driven vs deferred using your own understanding of the domain.
 
-Ask: "What are the main things users need to be able to do?"
+**Present via single AskUserQuestion:**
 
-For each capability mentioned:
-- Ask clarifying questions to make it specific
-- Probe for related capabilities
-- Group into categories
-
-**Scope each category:**
-
-For each category, use AskUserQuestion:
-
-- header: "[Category]" (max 12 chars)
-- question: "Which [category] features are in v1?"
-- multiSelect: true
+- header: "Requirements"
+- question: "Does this match what you're building?"
 - options:
-  - "[Feature 1]" — [brief description]
-  - "[Feature 2]" — [brief description]
-  - "[Feature 3]" — [brief description]
-  - "None for v1" — Defer entire category
+  - "Approve requirements" — Looks good, proceed
+  - "Adjust" — I want to add, remove, or move features
 
-Track responses:
-- Selected features → v1 requirements
-- Unselected table stakes → v2 (users expect these)
-- Unselected differentiators → out of scope
+**If "Adjust":**
+- Ask what they want to change (freeform): remove features, add features, or move between included/deferred
+- Incorporate changes into the proposal
+- Re-present the updated proposal via AskUserQuestion with the same options
+- Loop until "Approve requirements" selected
 
-**Identify gaps:**
-
-Use AskUserQuestion:
-- header: "Additions"
-- question: "Any requirements research missed? (Features specific to your vision)"
-- options:
-  - "No, research covered it" — Proceed
-  - "Yes, let me add some" — Capture additions
+**If "Approve requirements":** Proceed to generate REQUIREMENTS.md.
 
 **Validate core value:**
 
-Cross-check requirements against Core Value from PROJECT.md. If gaps detected, surface them.
+Cross-check requirements against Core Value from PROJECT.md. If gaps detected, surface them before generating REQUIREMENTS.md.
 
 **Generate REQUIREMENTS.md:**
 
@@ -877,7 +846,7 @@ Show every requirement (not counts) for user confirmation:
 Does this capture what you're building? (yes / adjust)
 ```
 
-If "adjust": Return to scoping.
+If "adjust": Return to proposal adjustment.
 
 **Commit requirements:**
 
@@ -1091,12 +1060,14 @@ Exit skill and invoke SlashCommand("/gsd:discuss-phase 1 --auto")
 - [ ] .planning/ directory created
 - [ ] Git repo initialized
 - [ ] Brownfield detection completed
-- [ ] Deep questioning completed (threads followed, not rushed)
+- [ ] Project proposal generated with auto-decisions, recommendations, and max 5 must-ask questions
+- [ ] User approved proposal (or overrode specific items)
 - [ ] PROJECT.md captures full context → **committed**
+- [ ] Workflow config proposed as single table, approved in one interaction
 - [ ] config.json has workflow mode, granularity, parallelization → **committed**
 - [ ] Research completed (if selected) — 4 parallel agents spawned → **committed**
-- [ ] Requirements gathered (from research or conversation)
-- [ ] User scoped each category (v1/v2/out of scope)
+- [ ] Requirements proposed with included/deferred categorization
+- [ ] User approved requirements in single interaction (or adjusted and re-approved)
 - [ ] REQUIREMENTS.md created with REQ-IDs → **committed**
 - [ ] gsd-roadmapper spawned with context
 - [ ] Roadmap files written immediately (not draft)

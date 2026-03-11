@@ -1,17 +1,18 @@
 <purpose>
 Validate built features through conversational testing with persistent state. Creates UAT.md that tracks test progress, survives /clear, and feeds gaps into /gsd:plan-phase --gaps.
 
-User tests, Claude records. One test at a time. Plain text responses.
+User tests all items from a batch checklist, reports results in one response. Claude records.
 </purpose>
 
 <philosophy>
-**Show expected, ask if reality matches.**
+**Present ALL tests as a batch checklist. User tests everything, then reports which ones fail in one response.**
 
-Claude presents what SHOULD happen. User confirms or describes what's different.
-- "yes" / "y" / "next" / empty → pass
-- Anything else → logged as issue, severity inferred
+Claude presents what SHOULD happen for every test at once. User tests all items, then replies with results.
+- "all pass" / "all good" → everything passes
+- Numbers with failure descriptions → logged as issues, severity inferred
+- Everything not explicitly marked as fail → assumed pass
 
-No Pass/Fail buttons. No severity questions. Just: "Here's what should happen. Does it?"
+No Pass/Fail buttons. No severity questions. Just: "Here's everything to test. Tell me what fails."
 </philosophy>
 
 <template>
@@ -145,12 +146,10 @@ updated: [ISO timestamp]
 ---
 
 ## Current Test
-<!-- OVERWRITE each test - shows where we are -->
+<!-- OVERWRITE each batch - shows where we are -->
 
-number: 1
-name: [first test name]
-expected: |
-  [what user should observe]
+batch: all
+total: [N]
 awaiting: user response
 
 ## Tests
@@ -180,38 +179,56 @@ skipped: 0
 
 Write to `.planning/phases/XX-name/{phase_num}-UAT.md`
 
-Proceed to `present_test`.
+Proceed to `present_all_tests`.
 </step>
 
-<step name="present_test">
-**Present current test to user:**
+<step name="present_all_tests">
+**Present all tests to user as a batch checklist:**
 
-Read Current Test section from UAT file.
+Read Tests section from UAT file. Collect all pending tests.
 
-Display using checkpoint box format:
+Display using batch checklist format:
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
-║  CHECKPOINT: Verification Required                           ║
+║  VERIFICATION CHECKLIST: Phase {X} — {Name}                  ║
 ╚══════════════════════════════════════════════════════════════╝
 
-**Test {number}: {name}**
+Please test ALL items below, then report results in ONE response.
 
-{expected}
+□ 1. {Test Name}
+     Expected: {expected behavior}
+
+□ 2. {Test Name}
+     Expected: {expected behavior}
+
+□ 3. {Test Name}
+     Expected: {expected behavior}
+
+[... all tests ...]
 
 ──────────────────────────────────────────────────────────────
-→ Type "pass" or describe what's wrong
+→ Reply with test results. Examples:
+  - "all pass"
+  - "1,2,3 pass. 4 fails — shows error on submit. 5 — wrong color"
+  - Just list what fails, everything else assumed pass
 ──────────────────────────────────────────────────────────────
 ```
 
 Wait for user response (plain text, no AskUserQuestion).
 </step>
 
-<step name="process_response">
-**Process user response and update file:**
+<step name="process_batch_response">
+**Parse user's batch response and update file:**
 
-**If response indicates pass:**
-- Empty response, "yes", "y", "ok", "pass", "next", "approved", "✓"
+**1. Parse the response for test results:**
+
+- "all pass" / "all good" / "everything works" → mark ALL tests as pass
+- Numbers with "pass" (e.g., "1,2,3 pass") → mark those as pass
+- Numbers with failure description (e.g., "4 fails — error on submit") → mark as issues with severity inference
+- Everything not explicitly marked as fail → assume pass
+
+**2. For each test marked as pass:**
 
 Update Tests section:
 ```
@@ -220,8 +237,9 @@ expected: {expected}
 result: pass
 ```
 
-**If response indicates skip:**
-- "skip", "can't test", "n/a"
+**3. For each test marked as skip:**
+
+- "skip", "can't test", "n/a" mentioned with a test number
 
 Update Tests section:
 ```
@@ -231,8 +249,7 @@ result: skipped
 reason: [user's reason if provided]
 ```
 
-**If response is anything else:**
-- Treat as issue description
+**4. For each test marked as issue:**
 
 Infer severity from description:
 - Contains: crash, error, exception, fails, broken, unusable → blocker
@@ -246,7 +263,7 @@ Update Tests section:
 ### {N}. {name}
 expected: {expected}
 result: issue
-reported: "{verbatim user response}"
+reported: "{verbatim user response for this test}"
 severity: {inferred}
 ```
 
@@ -254,20 +271,21 @@ Append to Gaps section (structured YAML for plan-phase --gaps):
 ```yaml
 - truth: "{expected behavior from test}"
   status: failed
-  reason: "User reported: {verbatim user response}"
+  reason: "User reported: {verbatim user response for this test}"
   severity: {inferred}
   test: {N}
   artifacts: []  # Filled by diagnosis
   missing: []    # Filled by diagnosis
 ```
 
-**After any response:**
+**5. After processing all results:**
 
 Update Summary counts.
 Update frontmatter.updated timestamp.
+Write all updates to the UAT file at once.
 
-If more tests remain → Update Current Test, go to `present_test`
-If no more tests → Go to `complete_session`
+If issues > 0 → Go to `complete_session`
+If issues == 0 → Go to `complete_session`
 </step>
 
 <step name="resume_from_file">
@@ -275,19 +293,50 @@ If no more tests → Go to `complete_session`
 
 Read the full UAT file.
 
-Find first test with `result: [pending]`.
+Collect all tests with `result: [pending]`.
+Collect all tests with results already recorded (pass/issue/skipped).
 
 Announce:
 ```
 Resuming: Phase {phase} UAT
 Progress: {passed + issues + skipped}/{total}
 Issues found so far: {issues count}
-
-Continuing from Test {N}...
 ```
 
-Update Current Test section with the pending test.
-Proceed to `present_test`.
+Present remaining tests as a batch checklist, showing which tests already passed:
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║  VERIFICATION CHECKLIST: Phase {X} — {Name} (resumed)        ║
+╚══════════════════════════════════════════════════════════════╝
+
+Already completed:
+  ✓ 1. {Test Name} — pass
+  ✓ 2. {Test Name} — pass
+  ✗ 3. {Test Name} — issue (logged)
+
+Please test remaining items, then report results in ONE response.
+
+□ 4. {Test Name}
+     Expected: {expected behavior}
+
+□ 5. {Test Name}
+     Expected: {expected behavior}
+
+□ 6. {Test Name}
+     Expected: {expected behavior}
+
+──────────────────────────────────────────────────────────────
+→ Reply with test results. Examples:
+  - "all pass"
+  - "4,5 pass. 6 fails — shows error on submit"
+  - Just list what fails, everything else assumed pass
+──────────────────────────────────────────────────────────────
+```
+
+Wait for user response (plain text, no AskUserQuestion).
+
+On response → Go to `process_batch_response`.
 </step>
 
 <step name="complete_session">
@@ -322,7 +371,7 @@ Present summary:
 [If issues > 0:]
 ### Issues Found
 
-[List from Issues section]
+[List from Gaps section]
 ```
 
 **If issues > 0:** Proceed to `diagnose_issues`
@@ -570,8 +619,8 @@ Default to **major** if unclear. User can correct if needed.
 
 <success_criteria>
 - [ ] UAT file created with all tests from SUMMARY.md
-- [ ] Tests presented one at a time with expected behavior
-- [ ] User responses processed as pass/issue/skip
+- [ ] All tests presented as a batch checklist with expected behavior
+- [ ] User reports results in one response; parsed as pass/issue/skip
 - [ ] Severity inferred from description (never asked)
 - [ ] Batched writes: on issue, every 5 passes, or completion
 - [ ] Committed on completion

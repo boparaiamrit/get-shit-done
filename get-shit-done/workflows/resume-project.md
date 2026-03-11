@@ -82,6 +82,8 @@ fi
 
 - This is a mid-plan resumption point
 - Read the file for specific resumption context
+- **Read the `<what_did_not_work>` section FIRST** before reading anything else — this prevents wasting time on known dead ends
+- **Read the `<key_decisions>` section** to understand choices already made and their rationale
 - Flag: "Found mid-plan checkpoint"
 
 **If PLAN without SUMMARY exists:**
@@ -116,6 +118,16 @@ Present complete project status to user:
 ⚠️  Incomplete work detected:
     - [.continue-here file or incomplete plan]
 
+[If .continue-here has <what_did_not_work> entries:]
+🚫 Previous session dead ends (DO NOT retry):
+    - [failed approach 1]: [why it failed]
+    - [failed approach 2]: [why it failed]
+
+[If .continue-here has <key_decisions> entries:]
+📌 Key decisions from previous session:
+    - [decision 1]: [rationale]
+    - [decision 2]: [rationale]
+
 [If interrupted agent found:]
 ⚠️  Interrupted agent detected:
     Agent ID: [id]
@@ -148,6 +160,7 @@ Based on project state, determine the most logical next action:
 **If .continue-here file exists:**
 → Primary: Resume from checkpoint
 → Option: Start fresh on current plan
+→ ⚠️ **WARNING**: DO NOT retry approaches listed in `<what_did_not_work>` unless you have a fundamentally different strategy. If you find yourself heading toward a previously failed approach, STOP and reconsider.
 
 **If incomplete plan (PLAN without SUMMARY):**
 → Primary: Complete the incomplete plan
@@ -289,8 +302,10 @@ This handles cases where:
 <quick_resume>
 If user says "continue" or "go":
 - Load state silently
+- If .continue-here exists, read `<what_did_not_work>` and `<key_decisions>` sections first
 - Determine primary action
 - Execute immediately without presenting options
+- If dead ends exist, briefly note: "Avoiding previously failed approaches: [list]"
 
 "Continuing from [state]... [action]"
 </quick_resume>
